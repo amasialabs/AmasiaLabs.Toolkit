@@ -1,0 +1,54 @@
+name: Build & Publish NuGet
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build all
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Pack all
+        run: dotnet pack --configuration Release --no-build --output ./artifacts
+
+      - name: Publish new NuGet packages to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_OWNER: ${{ github.repository_owner }}
+        run: |
+          for pkg in ./artifacts/*.nupkg; do
+            name=$(basename "$pkg" | cut -d. -f1)
+            version=$(basename "$pkg" | cut -d. -f2- | sed 's/\.nupkg$//')
+            echo "Checking $name $version..."
+
+            result=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+              "https://nuget.pkg.github.com/${GH_OWNER}/v3/registration3-gz-semver2/${name}/index.json" \
+              | jq -r '.items[].items[].catalogEntry.version' 2>/dev/null | grep -ix "$version" || true)
+
+            if [[ -z "$result" ]]; then
+              echo "Version $version is new, publishing..."
+              dotnet nuget push "$pkg" --api-key "$GITHUB_TOKEN" --source "https://nuget.pkg.github.com/${GH_OWNER}/index.json"
+            else
+              echo "Version $version already exists, skipping."
+            fi
+          done
+
+      - name: Show published artifacts
+        if: always()
+        run: ls -l ./artifacts
