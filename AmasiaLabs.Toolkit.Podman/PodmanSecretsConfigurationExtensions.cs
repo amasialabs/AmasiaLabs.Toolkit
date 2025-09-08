@@ -55,8 +55,8 @@ public static class PodmanSecretsConfigurationExtensions
         return configuration;
     }
 
-    public static HostApplicationBuilder AddPodmanSecrets(
-        this HostApplicationBuilder builder,
+    public static IHostApplicationBuilder AddPodmanSecrets(
+        this IHostApplicationBuilder builder,
         string directory = "/run/secrets",
         bool requireDirectory = false,
         bool throwOnError = false)
