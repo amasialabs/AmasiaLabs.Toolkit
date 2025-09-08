@@ -5,17 +5,17 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <LangVersion>default</LangVersion>
-        <PackageId>AmasiaLabs.Toolkit.MinimalApi</PackageId>
-        <Version>1.0.1</Version>
+        <PackageId>AmasiaLabs.Toolkit.Podman</PackageId>
+        <Version>1.0.0</Version>
         <Authors>Roman Stefanov</Authors>
         <Company>Amasia</Company>
-        <Description>Toolkit &amp; Boilerplate for Minimal API projects</Description>
+        <Description>Toolkit for Podman integration in .NET applications</Description>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" />
     </ItemGroup>
 
     <ItemGroup>

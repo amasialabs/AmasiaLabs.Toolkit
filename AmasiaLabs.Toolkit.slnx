@@ -1,3 +1,4 @@
 ﻿<Solution>
   <Project Path="AmasiaLabs.Toolkit.MinimalApi\AmasiaLabs.Toolkit.MinimalApi.csproj" Type="Classic C#" />
+  <Project Path="AmasiaLabs.Toolkit.Podman\AmasiaLabs.Toolkit.Podman.csproj" Type="Classic C#" />
 </Solution>
