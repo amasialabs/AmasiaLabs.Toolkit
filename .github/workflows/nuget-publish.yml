@@ -43,7 +43,7 @@ jobs:
 
             if [[ -z "$result" ]]; then
               echo "Version $version is new, publishing..."
-              dotnet nuget push "$pkg" --api-key "$GITHUB_TOKEN" --source "https://nuget.pkg.github.com/${GH_OWNER}/index.json"
+              dotnet nuget push "$pkg" --api-key "$GITHUB_TOKEN" --source "https://nuget.pkg.github.com/${GH_OWNER}/index.json" --skip-duplicate
             else
               echo "Version $version already exists, skipping."
             fi
