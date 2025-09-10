@@ -7,5 +7,6 @@ namespace AmasiaLabs.Toolkit.MinimalApi;
 public interface IEndpoints
 {
     public static abstract void DefineEndPoints(IEndpointRouteBuilder app);
-    public static abstract void AddEndPointServices(IServiceCollection services, IConfiguration configuration);
+    // Optional no-op default so implementers don't have to define it
+    public static void AddEndPointServices(IServiceCollection services, IConfiguration configuration) { }
 }
