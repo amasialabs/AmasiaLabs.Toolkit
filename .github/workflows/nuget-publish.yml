@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
+      - 'AmasiaLabs.Toolkit.MinimalApi/v*'
+      - 'AmasiaLabs.Toolkit.Podman/v*'
   workflow_dispatch:
 
 jobs:
@@ -27,25 +31,66 @@ jobs:
       - name: Pack all
         run: dotnet pack --configuration Release --no-build --output ./artifacts
 
-      - name: Publish new NuGet packages to GitHub Packages
+      - name: Publish new NuGet packages to GitHub Packages (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_PAT }}
           GH_OWNER: ${{ github.repository_owner }}
         run: |
+          set -euo pipefail
+
+          TAG="${GITHUB_REF_NAME}"
+          echo "Tag: $TAG"
+
+          PKG_FILTER=""
+          VERSION_FROM_TAG=""
+
+          # If tag is scoped like 'PackageId/v1.2.3', filter by package and enforce version match
+          if [[ "$TAG" == *"/"* ]]; then
+            PKG_FILTER="${TAG%%/*}"
+            VPART="${TAG##*/}"
+            VERSION_FROM_TAG="${VPART#v}"
+            echo "Scoped tag detected. Package: $PKG_FILTER, Version: $VERSION_FROM_TAG"
+          else
+            # Global tag like 'v1.2.3' (no package filter)
+            VPART="${TAG#v}"
+            VERSION_FROM_TAG="$VPART"
+            echo "Global tag detected. Version: $VERSION_FROM_TAG"
+          fi
+
           for pkg in ./artifacts/*.nupkg; do
-            name=$(basename "$pkg" | cut -d. -f1)
-            version=$(basename "$pkg" | cut -d. -f2- | sed 's/\.nupkg$//')
-            echo "Checking $name $version..."
+            # Extract Id and Version from the nuspec inside the nupkg
+            spec_id=$(unzip -p "$pkg" "*.nuspec" | sed -n 's:.*<id>\(.*\)</id>.*:\1:p' | head -n1)
+            spec_version=$(unzip -p "$pkg" "*.nuspec" | sed -n 's:.*<version>\(.*\)</version>.*:\1:p' | head -n1)
+
+            if [[ -z "${spec_id:-}" || -z "${spec_version:-}" ]]; then
+              echo "Could not parse nuspec for $pkg, skipping."
+              continue
+            fi
+
+            if [[ -n "$PKG_FILTER" && "$spec_id" != "$PKG_FILTER" ]]; then
+              echo "Skipping $spec_id due to tag package filter $PKG_FILTER"
+              continue
+            fi
+
+            if [[ -n "$PKG_FILTER" && "$spec_version" != "$VERSION_FROM_TAG" ]]; then
+              echo "Version mismatch for $spec_id: package=$spec_version != tag=$VERSION_FROM_TAG"
+              exit 1
+            fi
+
+            nameLower=$(echo "$spec_id" | tr '[:upper:]' '[:lower:]')
+            version="$spec_version"
+            echo "Checking $spec_id $version..."
 
             result=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-              "https://nuget.pkg.github.com/${GH_OWNER}/v3/registration3-gz-semver2/${name}/index.json" \
+              "https://nuget.pkg.github.com/${GH_OWNER}/v3/registration3-gz-semver2/${nameLower}/index.json" \
               | jq -r '.items[].items[].catalogEntry.version' 2>/dev/null | grep -ix "$version" || true)
 
             if [[ -z "$result" ]]; then
-              echo "Version $version is new, publishing..."
+              echo "Version $version is new, publishing $spec_id..."
               dotnet nuget push "$pkg" --api-key "$GITHUB_TOKEN" --source "https://nuget.pkg.github.com/${GH_OWNER}/index.json" --skip-duplicate
             else
-              echo "Version $version already exists, skipping."
+              echo "Version $version already exists for $spec_id, skipping."
             fi
           done
 
