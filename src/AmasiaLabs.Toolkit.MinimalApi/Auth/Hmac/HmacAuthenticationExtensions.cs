@@ -24,18 +24,18 @@ public static class HmacAuthenticationExtensions
     {
         var builder = services.AddAuthentication(options =>
         {
-            if (setAsDefault)
-            {
-                options.DefaultAuthenticateScheme = schemeName;
-                options.DefaultChallengeScheme = schemeName;
-            }
+            if (!setAsDefault)
+                return;
+            
+            options.DefaultAuthenticateScheme = schemeName;
+            options.DefaultChallengeScheme = schemeName;
         });
 
         builder.AddScheme<HmacAuthenticationOptions, HmacAuthenticationHandler>(schemeName, configure ?? (_ => { }));
 
         services.AddAuthorization(options =>
         {
-            options.AddPolicy("HmacOnly", policy => policy
+            options.AddPolicy(HmacAuthenticationHandler.PolicyName, policy => policy
                 .AddAuthenticationSchemes(schemeName)
                 .RequireAuthenticatedUser());
         });

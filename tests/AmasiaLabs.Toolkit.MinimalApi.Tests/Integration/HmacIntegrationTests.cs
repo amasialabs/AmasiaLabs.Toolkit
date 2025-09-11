@@ -93,7 +93,7 @@ public class HmacIntegrationTests
             var payload = await reader.ReadToEndAsync();
             return Results.Ok(payload);
         })
-        .RequireAuthorization("HmacOnly")
+        .RequireAuthorization(HmacAuthenticationHandler.PolicyName)
         .ProducesDefaultProblems();
 
         await app.StartAsync();

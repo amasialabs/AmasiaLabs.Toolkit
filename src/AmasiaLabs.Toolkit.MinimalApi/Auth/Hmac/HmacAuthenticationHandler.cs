@@ -28,6 +28,7 @@ public sealed class HmacAuthenticationHandler(
     : AuthenticationHandler<HmacAuthenticationOptions>(options, logger, encoder)
 {
     public const string SchemeName = "Hmac";
+    public const string PolicyName = "HmacOnly";
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {

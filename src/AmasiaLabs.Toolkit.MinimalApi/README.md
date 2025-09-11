@@ -176,7 +176,14 @@ builder.Services.AddSingleton<IHmacSignatureValidator, MyHmacSignatureValidator>
 builder.Services.AddHmacAuthentication(setAsDefault: false);
 
 app.MapPost("/webhook", () => Results.Ok())
-   .RequireAuthorization("HmacOnly")
+   .RequireAuthorization(HmacAuthenticationHandler.PolicyName)
+   .ProducesDefaultProblems();
+
+// Or 
+builder.Services.AddHmacAuthentication();
+
+app.MapPost("/webhook", () => Results.Ok())
+   .RequireAuthorization()
    .ProducesDefaultProblems();
 ```
 
@@ -186,7 +193,7 @@ Advanced customization
 builder.Services.AddHmacAuthentication(configure: opts =>
 {
     opts.ClientIdHeader = "X-My-Client";
-    opts.SignatureHeader = "X-My-Signature";
+    opts.SignatureHeader = "X-My-Signature"
     opts.WwwAuthenticateScheme = "HMAC-SHA256";
 
     // Custom payload (default: full body)
@@ -230,6 +237,28 @@ app.UseHmacResponseSigning(options =>
 ```
 
 By default, responses are signed only when the authenticated identity was issued by the `Hmac` scheme.
+
+Default implementations
+
+```csharp
+using AmasiaLabs.Toolkit.MinimalApi.Auth.Hmac;
+using AmasiaLabs.Toolkit.MinimalApi.Auth.Hmac.Defaults;
+
+// Generic signature behavior
+builder.Services.Configure<SignatureOptions>(o =>
+{
+    o.CheckSignature = true; // set false to bypass on dev
+    o.Trim = true;           // remove CR/LF/TAB before signing
+});
+
+// Hex (lowercase) HMAC-SHA256 signer/validator (algorithm name not baked into options)
+builder.Services.AddSingleton<IHmacSignatureSigner, DefaultSignatureSigner>();
+builder.Services.AddSingleton<IHmacSignatureValidator, DefaultSignatureValidator>();
+
+// Or Base64 HMAC-SHA256 variant
+// builder.Services.AddSingleton<IHmacSignatureSigner, HmacSha256Base64Signer>();
+// builder.Services.AddSingleton<IHmacSignatureValidator, HmacSha256Base64Validator>();
+```
 
 ## API Key Auth
 

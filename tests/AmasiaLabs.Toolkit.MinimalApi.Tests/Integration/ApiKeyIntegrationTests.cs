@@ -21,7 +21,7 @@ public class ApiKeyIntegrationTests
     {
         var (_, client) = await BuildApp();
 
-        var resp = await client.GetAsync("/sec");
+        var resp = await client.GetAsync("/sec", TestContext.Current.CancellationToken);
         resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         var pd = await resp.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
         pd!.Status.Should().Be(StatusCodes.Status401Unauthorized);

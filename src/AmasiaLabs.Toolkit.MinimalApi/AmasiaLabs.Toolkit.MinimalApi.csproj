@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <LangVersion>default</LangVersion>
         <PackageId>AmasiaLabs.Toolkit.MinimalApi</PackageId>
-        <Version>1.4.0</Version>
+        <Version>1.5.0</Version>
         <Authors>Roman Stefanov</Authors>
         <Company>Amasia</Company>
         <Description>Toolkit &amp; Boilerplate for Minimal API projects</Description>
