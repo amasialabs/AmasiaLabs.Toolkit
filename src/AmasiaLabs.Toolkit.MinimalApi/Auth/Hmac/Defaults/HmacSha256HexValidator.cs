@@ -5,15 +5,16 @@ using Microsoft.Extensions.Options;
 namespace AmasiaLabs.Toolkit.MinimalApi.Auth.Hmac.Defaults;
 
 /// <summary>
-/// Default validator using the registered <see cref="IHmacSignatureSigner"/> to compute the expected signature
-/// and comparing with constant-time semantics. Supports bypass via <see cref="SignatureOptions.CheckSignature"/>.
+/// HMAC-SHA256 validator for lower-case hex signatures using the registered
+/// <see cref="IHmacSignatureSigner"/>. Uses constant-time comparison and supports
+/// bypass via <see cref="SignatureOptions.CheckSignature"/>.
 /// </summary>
-public sealed class DefaultSignatureValidator : IHmacSignatureValidator
+public sealed class HmacSha256HexValidator : IHmacSignatureValidator
 {
     private readonly IHmacSignatureSigner signer;
     private readonly IOptions<SignatureOptions> options;
 
-    public DefaultSignatureValidator(IHmacSignatureSigner signer, IOptions<SignatureOptions> options)
+    public HmacSha256HexValidator(IHmacSignatureSigner signer, IOptions<SignatureOptions> options)
     {
         this.signer = signer;
         this.options = options;
@@ -32,4 +33,3 @@ public sealed class DefaultSignatureValidator : IHmacSignatureValidator
         return a.Length == b.Length && CryptographicOperations.FixedTimeEquals(a, b);
     }
 }
-

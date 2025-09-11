@@ -8,6 +8,8 @@ public static class HmacResponseSigningExtensions
     public static IApplicationBuilder UseHmacResponseSigning(this IApplicationBuilder app)
         => app.UseHmacResponseSigning(configure: null);
 
+    // ReSharper disable once CognitiveComplexity
+    // ReSharper disable once MemberCanBePrivate.Global
     public static IApplicationBuilder UseHmacResponseSigning(this IApplicationBuilder app, Action<HmacResponseSigningOptions>? configure)
     {
         var defaultOptions = new HmacResponseSigningOptions();
@@ -31,7 +33,7 @@ public static class HmacResponseSigningExtensions
                 await next();
 
                 // Only sign if status condition matches
-                if (defaultOptions.SuccessOnly && !(ctx.Response.StatusCode >= 200 && ctx.Response.StatusCode < 300))
+                if (defaultOptions.SuccessOnly && ctx.Response.StatusCode is < 200 or >= 300)
                     return;
 
                 buffer.Position = 0;

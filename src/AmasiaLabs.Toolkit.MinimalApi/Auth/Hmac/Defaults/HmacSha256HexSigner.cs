@@ -5,13 +5,14 @@ using Microsoft.Extensions.Options;
 namespace AmasiaLabs.Toolkit.MinimalApi.Auth.Hmac.Defaults;
 
 /// <summary>
-/// Default signer: HMAC-SHA256 with lower-case hex output. Applies optional payload trimming from <see cref="SignatureOptions"/>.
+/// HMAC-SHA256 signer that returns a lower-case hex string.
+/// Applies optional payload trimming from <see cref="SignatureOptions"/>.
 /// </summary>
-public sealed class DefaultSignatureSigner : IHmacSignatureSigner
+public sealed class HmacSha256HexSigner : IHmacSignatureSigner
 {
     private readonly IOptions<SignatureOptions> options;
 
-    public DefaultSignatureSigner(IOptions<SignatureOptions> options) => this.options = options;
+    public HmacSha256HexSigner(IOptions<SignatureOptions> options) => this.options = options;
 
     public string ComputeSignature(string key, string payload)
     {
@@ -40,4 +41,3 @@ public sealed class DefaultSignatureSigner : IHmacSignatureSigner
     private static char GetHexNibble(int value)
         => (char)(value < 10 ? ('0' + value) : ('a' + (value - 10)));
 }
-

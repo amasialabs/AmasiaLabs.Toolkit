@@ -9,17 +9,17 @@ namespace AmasiaLabs.Toolkit.MinimalApi.Auth.Hmac.Defaults;
 /// </summary>
 public sealed class HmacSha256Base64Signer : IHmacSignatureSigner
 {
-    private readonly IOptions<SignatureOptions>? options;
+    private readonly IOptions<SignatureOptions>? _options;
 
     public HmacSha256Base64Signer()
     {
     }
 
-    public HmacSha256Base64Signer(IOptions<SignatureOptions> options) => this.options = options;
+    public HmacSha256Base64Signer(IOptions<SignatureOptions> options) => _options = options;
 
     public string ComputeSignature(string key, string payload)
     {
-        if (options?.Value.Trim == true)
+        if (_options?.Value.Trim == true)
         {
             payload = payload.Replace("\r", string.Empty).Replace("\n", string.Empty).Replace("\t", string.Empty);
         }

@@ -10,20 +10,20 @@ namespace AmasiaLabs.Toolkit.MinimalApi.Auth.Hmac.Defaults;
 /// </summary>
 public sealed class HmacSha256Base64Validator : IHmacSignatureValidator
 {
-    private readonly IOptions<SignatureOptions>? options;
+    private readonly IOptions<SignatureOptions>? _options;
 
     public HmacSha256Base64Validator()
     {
     }
 
-    public HmacSha256Base64Validator(IOptions<SignatureOptions> options) => this.options = options;
+    public HmacSha256Base64Validator(IOptions<SignatureOptions> options) => _options = options;
 
     public bool ValidateSignature(string key, string signature, string payload)
     {
-        if (options?.Value.CheckSignature == false)
+        if (_options?.Value.CheckSignature == false)
             return true;
 
-        if (options?.Value.Trim == true)
+        if (_options?.Value.Trim == true)
         {
             payload = payload.Replace("\r", string.Empty).Replace("\n", string.Empty).Replace("\t", string.Empty);
         }

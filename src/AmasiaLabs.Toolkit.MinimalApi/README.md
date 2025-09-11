@@ -251,9 +251,9 @@ builder.Services.Configure<SignatureOptions>(o =>
     o.Trim = true;           // remove CR/LF/TAB before signing
 });
 
-// Hex (lowercase) HMAC-SHA256 signer/validator (algorithm name not baked into options)
-builder.Services.AddSingleton<IHmacSignatureSigner, DefaultSignatureSigner>();
-builder.Services.AddSingleton<IHmacSignatureValidator, DefaultSignatureValidator>();
+// Hex (lowercase) HMAC-SHA256 signer/validator
+builder.Services.AddSingleton<IHmacSignatureSigner, HmacSha256HexSigner>();
+builder.Services.AddSingleton<IHmacSignatureValidator, HmacSha256HexValidator>();
 
 // Or Base64 HMAC-SHA256 variant
 // builder.Services.AddSingleton<IHmacSignatureSigner, HmacSha256Base64Signer>();
