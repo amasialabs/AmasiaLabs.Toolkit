@@ -230,6 +230,34 @@ builder.Services.AddAuthentication().AddJwtBearer(o =>
 });
 ```
 
+### MinimalApi - JWT Auth Defaults
+
+Use a ready-made extension to avoid repeating boilerplate for JWT options, cookie token extraction and ProblemDetails on 401/403.
+
+```csharp
+// Registers authentication with JWT bearer defaults
+builder.Services.AddJwtAuthentication(builder.Configuration);
+
+// Alternatively, if you already have an AuthenticationBuilder:
+builder.Services
+    .AddAuthentication()
+    .AddJwtBearerWithProblemDetails(builder.Configuration);
+
+// Or explicitly provide values (and optional cookie name):
+builder.Services
+    .AddAuthentication()
+    .AddJwtBearerWithProblemDetails(
+        issuer: builder.Configuration["Jwt:Issuer"]!,
+        audience: builder.Configuration["Jwt:Audience"]!,
+        signingKey: builder.Configuration["JwtKey"] ?? builder.Configuration["Jwt:Key"]!,
+        cookieName: "jc");
+```
+
+Expected configuration keys:
+- `Jwt:Issuer` and `Jwt:Audience`
+- Either `JwtKey` (root) or `Jwt:Key`
+
+
 ### Podman Secrets Configuration
 
 Add Podman secrets to configuration:
