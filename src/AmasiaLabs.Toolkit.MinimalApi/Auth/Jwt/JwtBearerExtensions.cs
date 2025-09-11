@@ -46,6 +46,34 @@ public static class JwtBearerExtensions
     }
 
     /// <summary>
+    /// Adds JWT Bearer authentication with defaults and reads configuration values,
+    /// while allowing further scheme configuration (e.g., enabling sliding refresh).
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">Application configuration.</param>
+    /// <param name="cookieName">Cookie name to read the token from (default: "jc").</param>
+    /// <param name="configure">Additional configuration for <see cref="JwtBearerOptions"/>.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddJwtAuthentication(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string cookieName,
+        Action<JwtBearerOptions> configure)
+    {
+        var (issuer, audience, signingKey) = ResolveJwtSettings(configuration);
+
+        services
+            .AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearerWithProblemDetails(issuer, audience, signingKey, cookieName, configure);
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds a JWT bearer handler to the builder with defaults, reading configuration values.
     /// Uses configuration keys: "Jwt:Issuer", "Jwt:Audience" and "Jwt:Key".
     /// Also configures cookie token extraction and ProblemDetails for 401/403.
@@ -61,6 +89,25 @@ public static class JwtBearerExtensions
     {
         var (issuer, audience, signingKey) = ResolveJwtSettings(configuration);
         return builder.AddJwtBearerWithProblemDetails(issuer, audience, signingKey, cookieName);
+    }
+
+    /// <summary>
+    /// Adds a JWT bearer handler to the builder with defaults, reading configuration values,
+    /// and allows additional <see cref="JwtBearerOptions"/> configuration (e.g., sliding refresh).
+    /// </summary>
+    /// <param name="builder">Authentication builder.</param>
+    /// <param name="configuration">Application configuration.</param>
+    /// <param name="cookieName">Cookie name to read the token from (default: "jc").</param>
+    /// <param name="configure">Additional configuration for <see cref="JwtBearerOptions"/>.</param>
+    /// <returns>The authentication builder.</returns>
+    public static AuthenticationBuilder AddJwtBearerWithProblemDetails(
+        this AuthenticationBuilder builder,
+        IConfiguration configuration,
+        string cookieName,
+        Action<JwtBearerOptions> configure)
+    {
+        var (issuer, audience, signingKey) = ResolveJwtSettings(configuration);
+        return builder.AddJwtBearerWithProblemDetails(issuer, audience, signingKey, cookieName, configure);
     }
 
     /// <summary>

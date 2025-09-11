@@ -5,6 +5,12 @@ namespace AmasiaLabs.Toolkit.MinimalApi.Problems;
 
 public static class ProblemResultExtensions
 {
+    public static IResult Unauthorized(this HttpContext ctx, string? detail = null, string? title = null, IDictionary<string, object?>? extensions = null)
+        => CreateProblem(ctx, StatusCodes.Status401Unauthorized, title ?? "Unauthorized", detail, extensions);
+
+    public static IResult Forbidden(this HttpContext ctx, string? detail = null, string? title = null, IDictionary<string, object?>? extensions = null)
+        => CreateProblem(ctx, StatusCodes.Status403Forbidden, title ?? "Forbidden", detail, extensions);
+
     public static IResult BadRequest(this HttpContext ctx, string? detail = null, string? title = null, IDictionary<string, object?>? extensions = null)
         => CreateProblem(ctx, StatusCodes.Status400BadRequest, title ?? "Bad request", detail, extensions);
 
