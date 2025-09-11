@@ -6,6 +6,12 @@ public sealed class ProblemHandlingOptions
 {
     public bool IncludeExceptionDetails { get; set; } = false;
 
+    /// <summary>
+    /// When true, the global exception handler logs unhandled exceptions via ILogger.
+    /// Default: true.
+    /// </summary>
+    public bool LogExceptions { get; set; } = true;
+
     // ReSharper disable once MemberCanBePrivate.Global
     public Dictionary<int, string> StatusMessages { get; } = new()
     {

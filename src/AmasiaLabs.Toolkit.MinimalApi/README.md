@@ -50,6 +50,10 @@ builder.Services.AddGlobalExceptionHandling(opts =>
     // Map specific exceptions
     opts.ExceptionMaps[typeof(MyDomainException)] = (ex, ctx) =>
         (StatusCodes.Status400BadRequest, "Validation failed", null);
+
+    // Optional: include exception messages and log unhandled exceptions
+    // opts.IncludeExceptionDetails = true; // expose ex.Message in ProblemDetails (use carefully)
+    // opts.LogExceptions = true;          // log via ILogger in the global handler (default: true)
 });
 
 var app = builder.Build();
