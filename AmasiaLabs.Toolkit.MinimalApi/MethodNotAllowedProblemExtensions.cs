@@ -8,6 +8,9 @@ namespace AmasiaLabs.Toolkit.MinimalApi;
 public static class MethodNotAllowedProblemExtensions
 {
     public static IApplicationBuilder UseProblemMethodNotAllowed(this IApplicationBuilder app)
+        => app.UseProblemMethodNotAllowed(configure: null);
+
+    public static IApplicationBuilder UseProblemMethodNotAllowed(this IApplicationBuilder app, Action<ProblemDetails>? configure)
     {
         return app.Use(async (ctx, next) =>
         {
@@ -35,9 +38,10 @@ public static class MethodNotAllowedProblemExtensions
                 }
             };
 
+            configure?.Invoke(pd);
+
             ctx.Response.ContentType = "application/problem+json";
             await ctx.Response.WriteAsJsonAsync(pd);
         });
     }
 }
-

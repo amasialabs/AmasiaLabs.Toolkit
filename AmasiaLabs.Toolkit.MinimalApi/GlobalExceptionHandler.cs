@@ -8,7 +8,8 @@ public sealed class GlobalExceptionHandler(ProblemHandlingOptions options) : IEx
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext ctx, Exception ex, CancellationToken token)
     {
-        var mapped = options.ExceptionMaps.FirstOrDefault(kv => kv.Key.IsInstanceOfType(ex)).Value?.Invoke(ex, ctx)
+        var mapped = 
+            options.ExceptionMaps.FirstOrDefault(kv => kv.Key.IsInstanceOfType(ex)).Value?.Invoke(ex, ctx)
                      ?? options.Resolve(ex, ctx);
 
         var problem = new ProblemDetails

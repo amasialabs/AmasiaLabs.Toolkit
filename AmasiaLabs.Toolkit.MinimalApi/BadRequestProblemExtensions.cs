@@ -5,12 +5,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AmasiaLabs.Toolkit.MinimalApi;
 
-public static class TooManyRequestsProblemExtensions
+public static class BadRequestProblemExtensions
 {
-    public static IApplicationBuilder UseProblemTooManyRequests(this IApplicationBuilder app)
-        => app.UseProblemTooManyRequests(configure: null);
+    public static IApplicationBuilder UseProblemBadRequest(this IApplicationBuilder app)
+        => app.UseProblemBadRequest(configure: null);
 
-    public static IApplicationBuilder UseProblemTooManyRequests(this IApplicationBuilder app, Action<ProblemDetails>? configure)
+    public static IApplicationBuilder UseProblemBadRequest(this IApplicationBuilder app, Action<ProblemDetails>? configure)
     {
         return app.Use(async (ctx, next) =>
         {
@@ -19,23 +19,20 @@ public static class TooManyRequestsProblemExtensions
             if (ctx.Response.HasStarted)
                 return;
 
-            if (ctx.Response.StatusCode != StatusCodes.Status429TooManyRequests)
+            if (ctx.Response.StatusCode != StatusCodes.Status400BadRequest)
                 return;
 
             var opts = ctx.RequestServices.GetRequiredService<ProblemHandlingOptions>();
-            var status = StatusCodes.Status429TooManyRequests;
+            var status = StatusCodes.Status400BadRequest;
 
             var pd = new ProblemDetails
             {
                 Status = status,
-                Title = "Too many requests",
+                Title = "Bad request",
                 Detail = opts.GetMessage(status),
                 Instance = ctx.Request.Path,
                 Type = opts.TypeUriFactory(status),
-                Extensions =
-                {
-                    ["traceId"] = ctx.TraceIdentifier
-                }
+                Extensions = { ["traceId"] = ctx.TraceIdentifier }
             };
 
             configure?.Invoke(pd);
@@ -45,3 +42,4 @@ public static class TooManyRequestsProblemExtensions
         });
     }
 }
+

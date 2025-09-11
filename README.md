@@ -63,15 +63,14 @@ app.UseEndpoints<Program>();
 
 ### MinimalApi - Global Exception Handling (ProblemDetails)
 
-Add a global handler with RFC 7807 responses and customizable messages per status code and per exception type:
+Add a global handler with RFC 7807 responses. Default messages are provided for common statuses (400, 401, 403, 404, 405, 429, 500). You can still customize them and map exceptions:
 
 ```csharp
 // Program.cs
 builder.Services.AddGlobalExceptionHandling(opts =>
 {
-    // Customize default messages per status code
-    opts.StatusMessages[400] = "Request payload is invalid.";
-    opts.StatusMessages[404] = "User or resource not found.";
+    // Optionally override default messages
+    // opts.StatusMessages[404] = "User or resource not found";
 
     // Map specific exceptions to status/title
     opts.ExceptionMaps[typeof(MyDomainException)] = (ex, ctx) =>
@@ -127,6 +126,65 @@ builder.Services.AddRateLimiter(options =>
         httpContext.Response.ContentType = "application/problem+json";
         return httpContext.Response.WriteAsJsonAsync(pd, cancellationToken: token);
     };
+});
+```
+
+Return ProblemDetails from endpoints with details
+
+```csharp
+app.MapPost("/orders", async (HttpContext ctx, CreateOrder dto, IValidator<CreateOrder> validator) =>
+{
+    var validation = await validator.ValidateAsync(dto);
+    if (!validation.IsValid)
+    {
+        // 422 with domain-specific details and extra extensions
+        var errors = validation.Errors
+            .GroupBy(e => e.PropertyName)
+            .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+
+        return ctx.Unprocessable(
+            detail: "Validation failed",
+            extensions: new Dictionary<string, object?> { ["errors"] = errors }
+        );
+    }
+
+    if (await EmailExists(dto.Email))
+    {
+        // 409 with detail
+        return ctx.Conflict(detail: "Email already exists");
+    }
+
+    return Results.Created($"/orders/{42}", new { id = 42 });
+});
+
+app.MapPost("/parse-json", (HttpContext ctx, string body) =>
+{
+    if (!IsValidJson(body))
+        return ctx.BadRequest(detail: "Invalid JSON format");
+
+    return Results.Ok();
+});
+```
+
+Conflict and Unprocessable Content defaults:
+
+```csharp
+// 409 Conflict as ProblemDetails; you may add details
+app.UseProblemConflict(pd =>
+{
+    // pd.Detail = "Email already exists";
+});
+
+// 422 Unprocessable Content as ProblemDetails; you may add details
+app.UseProblemUnprocessableContent(pd =>
+{
+    // pd.Detail = "Validation failed: StartDate must be in the future";
+});
+
+// 400 Bad Request as ProblemDetails (optional helper) with optional details
+app.UseProblemBadRequest(pd =>
+{
+    // pd.Detail = "Invalid JSON format";
 });
 ```
 

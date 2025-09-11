@@ -9,11 +9,15 @@ public sealed class ProblemHandlingOptions
     // ReSharper disable once MemberCanBePrivate.Global
     public Dictionary<int, string> StatusMessages { get; } = new()
     {
-        [StatusCodes.Status400BadRequest] = "Invalid request.",
-        [StatusCodes.Status429TooManyRequests] = "Too many requests.",
-        [StatusCodes.Status403Forbidden] = "Access denied.",
-        [StatusCodes.Status404NotFound] = "Resource not found.",
-        [StatusCodes.Status500InternalServerError] = "Internal server error."
+        [StatusCodes.Status400BadRequest] = "Request payload is invalid",
+        [StatusCodes.Status401Unauthorized] = "Authentication required",
+        [StatusCodes.Status403Forbidden] = "Access denied",
+        [StatusCodes.Status404NotFound] = "Resource not found",
+        [StatusCodes.Status405MethodNotAllowed] = "HTTP method not allowed for this route",
+        [StatusCodes.Status409Conflict] = "Conflict with current state",
+        [StatusCodes.Status422UnprocessableEntity] = "Validation failed",
+        [StatusCodes.Status429TooManyRequests] = "Too many requests",
+        [StatusCodes.Status500InternalServerError] = "Internal server error"
     };
 
     // ReSharper disable once CollectionNeverUpdated.Global
@@ -30,5 +34,5 @@ public sealed class ProblemHandlingOptions
         _ => (StatusCodes.Status500InternalServerError, "Internal server error", null)
     };
 
-    public string GetMessage(int status) => StatusMessages.TryGetValue(status, out var m) ? m : "An error occurred.";
+    public string GetMessage(int status) => StatusMessages.GetValueOrDefault(status, "An error occurred.");
 }
