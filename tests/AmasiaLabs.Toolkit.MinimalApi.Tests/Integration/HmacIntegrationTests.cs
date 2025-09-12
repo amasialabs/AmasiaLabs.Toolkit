@@ -18,20 +18,19 @@ public class HmacIntegrationTests
     [Fact]
     public async Task Missing_Hmac_Should_Return_401_ProblemDetails()
     {
+        // Arrange
         var (_, client) = await BuildHmacApp();
 
-        var resp = 
-            await client.PostAsync(
-                "/secure-echo", 
-                new StringContent("hello", Encoding.UTF8, "text/plain"), 
-                TestContext.Current.CancellationToken);
-        
+        // Act
+        var resp = await client.PostAsync(
+            "/secure-echo",
+            new StringContent("hello", Encoding.UTF8, "text/plain"),
+            TestContext.Current.CancellationToken);
+        var pd = await resp.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
         resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         resp.Headers.WwwAuthenticate.ToString().Should().Contain("Hmac");
-        var pd = 
-            await resp.Content.ReadFromJsonAsync<ProblemDetails>(
-                cancellationToken: TestContext.Current.CancellationToken);
-        
         pd!.Status.Should().Be(StatusCodes.Status401Unauthorized);
         pd.Title.Should().Be("Unauthorized");
     }
@@ -39,11 +38,11 @@ public class HmacIntegrationTests
     [Fact]
     public async Task Valid_Hmac_Should_Return_200_And_Signed_Response_Header()
     {
+        // Arrange
         var (_, client) = await BuildHmacApp(signResponses: true);
         var body = "hello";
         var key = TestHmacKeyProvider.Key;
         var signature = TestHmacSignature.Sign(key, body);
-
         var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
         {
             Content = new StringContent(body, Encoding.UTF8, "text/plain")
@@ -51,9 +50,10 @@ public class HmacIntegrationTests
         req.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
         req.Headers.Add("X-Signature", signature);
 
-        var resp = 
-            await client.SendAsync(req, TestContext.Current.CancellationToken);
-        
+        // Act
+        var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
+
+        // Assert
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
         resp.Headers.TryGetValues("X-Signature", out var values).Should().BeTrue();
         // The response body is JSON for string content: "hello"

@@ -10,6 +10,7 @@ public static class UnprocessableContentProblemExtensions
     public static IApplicationBuilder UseProblemUnprocessableContent(this IApplicationBuilder app)
         => app.UseProblemUnprocessableContent(configure: null);
 
+    // ReSharper disable once MemberCanBePrivate.Global
     public static IApplicationBuilder UseProblemUnprocessableContent(this IApplicationBuilder app, Action<ProblemDetails>? configure)
     {
         return app.Use(async (ctx, next) =>

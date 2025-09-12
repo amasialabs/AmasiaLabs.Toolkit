@@ -1,0 +1,80 @@
+using AmasiaLabs.Toolkit.FlowflakeId;
+using FluentAssertions;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
+using Xunit;
+
+namespace AmasiaLabs.Toolkit.FlowflakeId.Tests.Unit;
+
+public class FlowflakeIdTests
+{
+    private static FlowflakeId Create(FlowflakeIdOptions opts, FakeTimeProvider time)
+        => new(Options.Create(opts), new NumericBase62Codec(), time);
+
+    [Fact]
+    public void Generate_ReturnsIds_WithExpectedLayout()
+    {
+        // Arrange
+        var epoch = new DateTime(2023, 02, 15, 0, 0, 0, DateTimeKind.Utc);
+        var start = new DateTimeOffset(epoch).AddSeconds(123);
+        var time = new FakeTimeProvider(start);
+        var opts = new FlowflakeIdOptions { InstanceId = 42, UseUtcNow = true, Epoch = epoch };
+        var gen = Create(opts, time);
+
+        // Act
+        var id = gen.Generate();
+        var dt = gen.GetDateTime(id);
+        var instance = gen.GetInstanceIdFromGlobalId(id);
+
+        // Assert
+        dt.Should().Be(epoch.AddSeconds(123));
+        instance.Should().Be(42);
+        gen.GetInstanceId().Should().Be(42);
+    }
+
+    [Fact]
+    public void Generate_InSameSecond_IncrementsSequence()
+    {
+        // Arrange
+        var epoch = new DateTime(2023, 02, 15, 0, 0, 0, DateTimeKind.Utc);
+        var start = new DateTimeOffset(epoch).AddSeconds(10);
+        var time = new FakeTimeProvider(start);
+        var opts = new FlowflakeIdOptions { InstanceId = 1, UseUtcNow = true, Epoch = epoch };
+        var gen = Create(opts, time);
+
+        // Act
+        var ids = Enumerable.Range(0, 5).Select(_ => gen.Generate()).ToArray();
+
+        // Assert
+        ids.Should().BeInAscendingOrder();
+        // Legacy behavior: first sequence starts at 2 (initial value is 1, then Interlocked.Increment).
+        ids.Select(id => id & ((1L << 22) - 1)).Should().ContainInOrder(2, 3, 4, 5, 6);
+    }
+
+    [Fact]
+    public void Generate_WhenClockRollsBack_UsesFailoverInstance()
+    {
+        // Arrange
+        var epoch = new DateTime(2023, 02, 15, 0, 0, 0, DateTimeKind.Utc);
+        var start = new DateTimeOffset(epoch).AddSeconds(1000);
+        var time = new FakeTimeProvider(start);
+        var opts = new FlowflakeIdOptions { InstanceId = 10, FailoverInstanceId = 11, UseUtcNow = true, Epoch = epoch };
+        var gen = Create(opts, time);
+        var earlier = epoch.AddSeconds(998);
+
+        // Act
+        var id1 = gen.Generate(); // at t=1000, instance=10
+        var id2 = gen.GenerateForDate(earlier); // should use instance=11
+        var id3 = gen.Generate(); // back to now
+        var inst1 = gen.GetInstanceIdFromGlobalId(id1);
+        var inst2 = gen.GetInstanceIdFromGlobalId(id2);
+        var inst3 = gen.GetInstanceIdFromGlobalId(id3);
+
+        // Assert
+        inst1.Should().Be(10);
+        inst2.Should().Be(11);
+        inst3.Should().Be(10);
+        id3.Should().BeGreaterThan(id1);
+        id3.Should().BeGreaterThan(id2);
+    }
+}

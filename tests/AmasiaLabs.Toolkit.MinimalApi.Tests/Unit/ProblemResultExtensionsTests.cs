@@ -13,6 +13,7 @@ public class ProblemResultExtensionsTests
     [Fact]
     public async Task Unprocessable_Should_Write_ProblemDetails()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton(new ProblemHandlingOptions());
@@ -21,30 +22,27 @@ public class ProblemResultExtensionsTests
         var ctx = new DefaultHttpContext
         {
             RequestServices = sp,
-            Response =
-            {
-                Body = new MemoryStream()
-            }
+            Response = { Body = new MemoryStream() }
         };
 
+        // Act
         var result = ctx.Unprocessable(detail: "Validation failed");
         await result.ExecuteAsync(ctx);
 
-        ctx.Response.StatusCode.Should().Be(StatusCodes.Status422UnprocessableEntity);
-        ctx.Response.ContentType.Should().Be("application/problem+json");
-
         ctx.Response.Body.Seek(0, SeekOrigin.Begin);
-        var json =
-            await new StreamReader(
+        var json = await new StreamReader(
                 ctx.Response.Body,
                 Encoding.UTF8,
                 detectEncodingFromByteOrderMarks: false,
                 bufferSize: 1024, leaveOpen: true)
-                .ReadToEndAsync(TestContext.Current.CancellationToken);
+            .ReadToEndAsync(TestContext.Current.CancellationToken);
 
         var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
+        // Assert
+        ctx.Response.StatusCode.Should().Be(StatusCodes.Status422UnprocessableEntity);
+        ctx.Response.ContentType.Should().Be("application/problem+json");
         root.GetProperty("status").GetInt32().Should().Be(422);
         root.GetProperty("title").GetString().Should().Be("Unprocessable content");
         root.TryGetProperty("detail", out var detailProp).Should().BeTrue();

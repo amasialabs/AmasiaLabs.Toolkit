@@ -17,6 +17,7 @@ public class JwtIntegrationTests
     [Fact]
     public async Task Missing_Jwt_Should_Return_401_ProblemDetails()
     {
+        // Arrange
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
@@ -41,11 +42,13 @@ public class JwtIntegrationTests
         await app.StartAsync(TestContext.Current.CancellationToken);
         var client = app.GetTestClient();
 
+        // Act
         var resp = await client.GetAsync("/secure", TestContext.Current.CancellationToken);
-        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         var pd = await resp.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         pd!.Status.Should().Be(StatusCodes.Status401Unauthorized);
         pd.Title.Should().Be("Unauthorized");
     }
 }
-

@@ -19,11 +19,15 @@ public class ApiKeyIntegrationTests
     [Fact]
     public async Task Missing_ApiKey_Should_Return_401_ProblemDetails()
     {
+        // Arrange
         var (_, client) = await BuildApp();
 
+        // Act
         var resp = await client.GetAsync("/sec", TestContext.Current.CancellationToken);
-        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         var pd = await resp.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         pd!.Status.Should().Be(StatusCodes.Status401Unauthorized);
         pd.Title.Should().Be("Unauthorized");
     }
@@ -31,17 +35,22 @@ public class ApiKeyIntegrationTests
     [Fact]
     public async Task Valid_ApiKey_Should_Return_200()
     {
+        // Arrange
         var (_, client) = await BuildApp();
-
         var req = new HttpRequestMessage(HttpMethod.Get, "/sec");
         req.Headers.Add("X-Api-Key", TestApiKeyProvider.ValidKey);
+
+        // Act
         var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
+
+        // Assert
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task Authenticated_But_Forbidden_Should_Return_403_ProblemDetails()
     {
+        // Arrange
         var (app, client) = await BuildApp(configureAuth: opts =>
         {
             // Return a subject and a claim that is NOT admin
@@ -60,11 +69,14 @@ public class ApiKeyIntegrationTests
 
         app.MapGet("/admin", () => Results.Ok()).RequireAuthorization("AdminOnly");
 
+        // Act
         var req = new HttpRequestMessage(HttpMethod.Get, "/admin");
         req.Headers.Add("X-Api-Key", TestApiKeyProvider.ValidKey);
         var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
-        resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         var pd = await resp.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         pd!.Status.Should().Be(StatusCodes.Status403Forbidden);
         pd.Title.Should().Be("Forbidden");
     }
@@ -100,4 +112,3 @@ public class ApiKeyIntegrationTests
             => Task.FromResult(apiKey == ValidKey ? "api-client" : null);
     }
 }
-

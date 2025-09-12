@@ -16,6 +16,7 @@ public class ProblemDetailsIntegrationTests
     [Fact]
     public async Task Fallback_404_Should_Return_ProblemDetails()
     {
+        // Arrange
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
@@ -30,20 +31,21 @@ public class ProblemDetailsIntegrationTests
         await app.StartAsync(TestContext.Current.CancellationToken);
         var client = app.GetTestClient();
 
-        var resp = 
-            await client.GetAsync("/missing", TestContext.Current.CancellationToken);
-        
+        // Act
+        var resp = await client.GetAsync("/missing", TestContext.Current.CancellationToken);
+        var pd = await resp.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
         resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        var pd =
-            await resp.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
         pd.Should().NotBeNull();
-        pd.Status.Should().Be(StatusCodes.Status404NotFound);
+        pd!.Status.Should().Be(StatusCodes.Status404NotFound);
         pd.Title.Should().Be("Not found");
     }
 
     [Fact]
     public async Task MethodNotAllowed_405_Should_Return_ProblemDetails()
     {
+        // Arrange
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
@@ -57,17 +59,17 @@ public class ProblemDetailsIntegrationTests
         await app.StartAsync(TestContext.Current.CancellationToken);
         var client = app.GetTestClient();
 
-        var resp =
-            await client.PostAsync(
-                "/only-get", 
-                content: null, cancellationToken: 
-                TestContext.Current.CancellationToken);
+        // Act
+        var resp = await client.PostAsync(
+            "/only-get",
+            content: null,
+            cancellationToken: TestContext.Current.CancellationToken);
+        var pd = await resp.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
         resp.StatusCode.Should().Be(HttpStatusCode.MethodNotAllowed);
-        var pd = 
-            await resp.Content.ReadFromJsonAsync<ProblemDetails>(
-                cancellationToken: TestContext.Current.CancellationToken);
         pd.Should().NotBeNull();
-        pd.Status.Should().Be(StatusCodes.Status405MethodNotAllowed);
+        pd!.Status.Should().Be(StatusCodes.Status405MethodNotAllowed);
         pd.Title.Should().Be("Method not allowed");
     }
 }

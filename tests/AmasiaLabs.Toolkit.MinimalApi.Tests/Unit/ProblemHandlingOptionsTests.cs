@@ -10,8 +10,13 @@ public class ProblemHandlingOptionsTests
     [Fact]
     public void Default_Status_Messages_Should_Contain_Common_Statuses()
     {
+        // Arrange
         var opts = new ProblemHandlingOptions();
 
+        // Act
+        // no-op
+
+        // Assert
         opts.GetMessage(StatusCodes.Status400BadRequest).Should().NotBeNullOrWhiteSpace();
         opts.GetMessage(StatusCodes.Status401Unauthorized).Should().NotBeNullOrWhiteSpace();
         opts.GetMessage(StatusCodes.Status403Forbidden).Should().NotBeNullOrWhiteSpace();
@@ -23,4 +28,3 @@ public class ProblemHandlingOptionsTests
         opts.GetMessage(StatusCodes.Status500InternalServerError).Should().NotBeNullOrWhiteSpace();
     }
 }
-

@@ -150,6 +150,7 @@ Ready-made helpers for JWT Bearer + cookie token extraction + 401/403 ProblemDet
 
 ```csharp
 // Registers authentication with sensible defaults
+// Default config path: "Amasia:Toolkit:Jwt" (Issuer, Audience, Key). Falls back to "Jwt".
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
 // Or if you already have an AuthenticationBuilder:
@@ -161,15 +162,16 @@ builder.Services
 builder.Services
     .AddAuthentication()
     .AddJwtBearerWithProblemDetails(
-        issuer: builder.Configuration["Jwt:Issuer"]!,
-        audience: builder.Configuration["Jwt:Audience"]!,
-        signingKey: builder.Configuration["Jwt:Key"]!,
+        issuer: builder.Configuration["Amasia:Toolkit:Jwt:Issuer"] ?? builder.Configuration["Jwt:Issuer"]!,
+        audience: builder.Configuration["Amasia:Toolkit:Jwt:Audience"] ?? builder.Configuration["Jwt:Audience"]!,
+        signingKey: builder.Configuration["Amasia:Toolkit:Jwt:Key"] ?? builder.Configuration["Jwt:Key"]!,
         cookieName: "jc");
 ```
 
-Expected configuration keys:
-- `Jwt:Issuer` and `Jwt:Audience`
-- `Jwt:Key`
+Expected configuration keys (preferred → fallback):
+- `Amasia:Toolkit:Jwt:Issuer` → `Jwt:Issuer`
+- `Amasia:Toolkit:Jwt:Audience` → `Jwt:Audience`
+- `Amasia:Toolkit:Jwt:Key` → `Jwt:Key`
 
 ### Sliding refresh (auto-renew token)
 

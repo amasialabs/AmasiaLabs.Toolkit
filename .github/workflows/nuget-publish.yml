@@ -5,9 +5,9 @@ on:
     branches:
       - main
     tags:
-      - 'v*'
       - 'AmasiaLabs.Toolkit.MinimalApi/v*'
       - 'AmasiaLabs.Toolkit.Podman/v*'
+      - 'AmasiaLabs.Toolkit.FlowflakeId/v*'
   workflow_dispatch:
 
 jobs:

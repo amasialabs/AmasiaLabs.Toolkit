@@ -19,6 +19,7 @@ public class StatusProblemMiddlewareTests
     [InlineData(422, "Unprocessable content", nameof(ErrorHandlingExtensions))]
     public async Task Status_Code_Should_Be_Converted_To_ProblemDetails(int code, string expectedTitle, string _)
     {
+        // Arrange
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
@@ -34,9 +35,13 @@ public class StatusProblemMiddlewareTests
 
         await app.StartAsync(TestContext.Current.CancellationToken);
         var client = app.GetTestClient();
+
+        // Act
         var resp = await client.GetAsync("/t", TestContext.Current.CancellationToken);
-        resp.StatusCode.Should().Be((HttpStatusCode)code);
         var pd = await resp.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        resp.StatusCode.Should().Be((HttpStatusCode)code);
         pd!.Status.Should().Be(code);
         pd.Title.Should().Be(expectedTitle);
     }
@@ -44,6 +49,7 @@ public class StatusProblemMiddlewareTests
     [Fact]
     public async Task TooManyRequests_Should_Be_Converted_To_ProblemDetails()
     {
+        // Arrange
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
@@ -55,11 +61,14 @@ public class StatusProblemMiddlewareTests
 
         await app.StartAsync(TestContext.Current.CancellationToken);
         var client = app.GetTestClient();
+
+        // Act
         var resp = await client.GetAsync("/t", TestContext.Current.CancellationToken);
-        resp.StatusCode.Should().Be((HttpStatusCode)429);
         var pd = await resp.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        resp.StatusCode.Should().Be((HttpStatusCode)429);
         pd!.Status.Should().Be(429);
         pd.Title.Should().Be("Too many requests");
     }
 }
-
