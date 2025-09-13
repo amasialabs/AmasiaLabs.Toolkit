@@ -14,8 +14,10 @@ public sealed partial class FlowflakeId(
     private const int MinValue = 1;
     private const int MaxValue = 2_097_151; // 2^21 - 1 (legacy cap; leaves one spare bit in [0..21])
 
-    private readonly DateTime _startingPoint = options.Value.Epoch;
+    private readonly DateTime _epochUtc = EnsureUtc(options.Value.Epoch);
     private readonly bool _useUtc = options.Value.UseUtcNow;
+    private readonly FlowflakeTimeSemantics _semantics = options.Value.TimeSemantics;
+    private readonly DateTime _epochRaw = options.Value.Epoch;
     private readonly int _instanceId = options.Value.InstanceId;
     private readonly int? _failoverInstanceId = options.Value.FailoverInstanceId;
 
@@ -32,7 +34,9 @@ public sealed partial class FlowflakeId(
 
     public long GenerateForDate(DateTime date)
     {
-        var seconds = (long)date.Subtract(_startingPoint).TotalSeconds;
+        long seconds = _semantics == FlowflakeTimeSemantics.LegacyUnspecifiedEpoch
+            ? (long)(DateTime.SpecifyKind(date, DateTimeKind.Unspecified) - DateTime.SpecifyKind(_epochRaw, DateTimeKind.Unspecified)).TotalSeconds
+            : (long)(EnsureUtc(date) - _epochUtc).TotalSeconds;
         var last = Volatile.Read(ref _lastSeconds);
         var useFailover = _failoverInstanceId.HasValue && seconds < last;
 
@@ -64,7 +68,10 @@ public sealed partial class FlowflakeId(
 
     public int GetInstanceId() => _instanceId;
 
-    public DateTime GetDateTime(long id) => _startingPoint.Add(TimeSpan.FromSeconds(id >> 31));
+    public DateTime GetDateTime(long id)
+        => _semantics == FlowflakeTimeSemantics.LegacyUnspecifiedEpoch
+            ? DateTime.SpecifyKind(_epochRaw, DateTimeKind.Unspecified).Add(TimeSpan.FromSeconds(id >> 31))
+            : _epochUtc.Add(TimeSpan.FromSeconds(id >> 31));
 
     public int GetInstanceIdFromGlobalId(long id) => (int)((id - (id >> 31 << 31)) >> 22);
 
@@ -87,6 +94,14 @@ public sealed partial class FlowflakeId(
             spinner.SpinOnce();
         }
     }
+
+    private static DateTime EnsureUtc(DateTime dt)
+        => dt.Kind switch
+        {
+            DateTimeKind.Utc => dt,
+            DateTimeKind.Local => dt.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+        };
 }
 
 public sealed partial class FlowflakeId

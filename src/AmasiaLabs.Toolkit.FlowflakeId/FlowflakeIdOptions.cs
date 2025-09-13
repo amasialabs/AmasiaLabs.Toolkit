@@ -41,4 +41,11 @@ public sealed class FlowflakeIdOptions
     [Range(1, 511, ErrorMessage = "FailoverInstanceId must be between 1 and 511 if set")]
     // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public int? FailoverInstanceId { get; init; }
+
+    /// <summary>
+    /// Time semantics for computing seconds from epoch.
+    /// Default is UTC-normalized for stable distributed behavior.
+    /// Set to <see cref="FlowflakeTimeSemantics.LegacyUnspecifiedEpoch"/> to preserve historical behavior based on DateTime difference without UTC normalization.
+    /// </summary>
+    public FlowflakeTimeSemantics TimeSemantics { get; init; } = FlowflakeTimeSemantics.UtcNormalized;
 }

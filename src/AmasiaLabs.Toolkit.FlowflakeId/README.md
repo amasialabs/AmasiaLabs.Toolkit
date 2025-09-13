@@ -21,7 +21,8 @@ appsettings.json:
       "FlowflakeId": {
         "InstanceId": 1,
         "UseUtcNow": true,
-        "Epoch": "2023-02-15T00:00:00"
+        "Epoch": "2023-02-15T00:00:00Z",
+        "TimeSemantics": "UtcNormalized"
       }
     }
   }
@@ -36,7 +37,7 @@ You can also bind from any custom section path by passing it to `AddFlowflakeId(
 - Bits 22..30: instance id (1..511)
 - Bits 0..21: sequence (internally capped to 2^21-1 for compatibility)
 
-Defaults mirror the legacy behavior except epoch is not defaulted; set it explicitly to preserve existing IDs.
+Defaults mirror modern, UTC-normalized behavior (safer for distributed systems). To preserve legacy behavior, set `TimeSemantics = LegacyUnspecifiedEpoch`.
 
 ## Usage
 
@@ -94,6 +95,16 @@ var id1 = gen.Generate();
 fake.Advance(TimeSpan.FromSeconds(1));
 var id2 = gen.Generate();
 ```
+
+## Time Semantics
+
+- `UtcNormalized` (default):
+  - Epoch and input times are normalized to UTC before computing seconds.
+  - Recommended for services (e.g., gRPC) and multi-zone deployments.
+- `LegacyUnspecifiedEpoch`:
+  - Seconds are computed as a raw `DateTime` difference without UTC normalization.
+  - Preserves historical behavior when `Epoch` was `Unspecified` and `Generate()` used `DateTime.Now`.
+  - Use only to maintain exact continuity of existing IDs; prefer `UtcNormalized` for new systems.
 ```
 
 ### Base62

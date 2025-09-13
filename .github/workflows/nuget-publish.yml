@@ -8,6 +8,7 @@ on:
       - 'AmasiaLabs.Toolkit.MinimalApi/v*'
       - 'AmasiaLabs.Toolkit.Podman/v*'
       - 'AmasiaLabs.Toolkit.FlowflakeId/v*'
+      - 'AmasiaLabs.Toolkit.FlowflakeId.Grpc/v*'
   workflow_dispatch:
 
 jobs:

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/AmasiaLabs.Toolkit.FlowflakeId.Grpc/AmasiaLabs.Toolkit.FlowflakeId.Grpc.csproj" />
+    <ProjectReference Include="../../src/AmasiaLabs.Toolkit.FlowflakeId/AmasiaLabs.Toolkit.FlowflakeId.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Grpc.Net.Client" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Tools" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="../../src/AmasiaLabs.Toolkit.FlowflakeId.Grpc/Protos/flowflakeid.proto" GrpcServices="Client" CompileOutputs="true" Link="Protos/flowflakeid.proto" />
+  </ItemGroup>
+
+</Project>

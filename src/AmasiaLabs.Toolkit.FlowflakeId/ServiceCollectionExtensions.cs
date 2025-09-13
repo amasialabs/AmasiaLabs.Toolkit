@@ -77,6 +77,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    // ReSharper disable once UnusedMethodReturnValue.Local
     private static IServiceCollection TryAddBase62Codec(this IServiceCollection services)
     {
         // Register a default codec only if the app didn't provide one.
