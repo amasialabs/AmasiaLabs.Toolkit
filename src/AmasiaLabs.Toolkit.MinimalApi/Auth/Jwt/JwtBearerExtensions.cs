@@ -18,11 +18,10 @@ namespace AmasiaLabs.Toolkit.MinimalApi.Auth.Jwt;
 /// </summary>
 public static class JwtBearerExtensions
 {
-    private const string DefaultJwtSectionPath = "Amasia:Toolkit:Jwt";
+    private const string DefaultJwtSectionPath = "Amasia:Toolkit:MinimalApi:Jwt";
     /// <summary>
     /// Adds JWT Bearer authentication with defaults and reads configuration values.
-    /// Uses configuration keys under "Amasia:Toolkit:Jwt" (Issuer, Audience, Key).
-    /// Falls back to legacy "Jwt" section when the default path is missing.
+    /// Uses configuration keys under "Amasia:Toolkit:MinimalApi:Jwt" (Issuer, Audience, Key).
     /// Also configures cookie token extraction and ProblemDetails for 401/403.
     /// </summary>
     /// <param name="services">The service collection.</param>
@@ -212,21 +211,17 @@ public static class JwtBearerExtensions
     private static (string Issuer, string Audience, string Key) ResolveJwtSettings(IConfiguration configuration)
     {
         var jwtSection = configuration.GetSection(DefaultJwtSectionPath);
-        if (!jwtSection.Exists())
-        {
-            jwtSection = configuration.GetSection("Jwt");
-        }
 
         var issuer = jwtSection["Issuer"];
         var audience = jwtSection["Audience"];
         var key = jwtSection["Key"];
 
         if (string.IsNullOrWhiteSpace(issuer))
-            throw new InvalidOperationException("JWT configuration is missing Issuer (Amasia:Toolkit:Jwt:Issuer or Jwt:Issuer).");
+            throw new InvalidOperationException("JWT configuration is missing Issuer (Amasia:Toolkit:MinimalApi:Jwt:Issuer or Jwt:Issuer).");
         if (string.IsNullOrWhiteSpace(audience))
-            throw new InvalidOperationException("JWT configuration is missing Audience (Amasia:Toolkit:Jwt:Audience or Jwt:Audience).");
+            throw new InvalidOperationException("JWT configuration is missing Audience (Amasia:Toolkit:MinimalApi:Jwt:Audience or Jwt:Audience).");
         if (string.IsNullOrWhiteSpace(key))
-            throw new InvalidOperationException("JWT signing key is missing (Amasia:Toolkit:Jwt:Key or Jwt:Key).");
+            throw new InvalidOperationException("JWT signing key is missing (Amasia:Toolkit:MinimalApi:Jwt:Key).");
 
         return (issuer, audience, key);
     }
