@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
     <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client</PackageId>
-    <Version>1.1.2</Version>
+    <Version>1.2.0</Version>
     <Authors>Roman Stefanov</Authors>
     <Company>Amasia</Company>
     <Description>gRPC client SDK for Flowflake ID service with failover and ServerInfo caching</Description>
@@ -24,6 +24,9 @@
     <PackageReference Include="Grpc.Tools" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,7 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../AmasiaLabs.Toolkit.FlowflakeId/AmasiaLabs.Toolkit.FlowflakeId.csproj" />
+    <ProjectReference Include="../AmasiaLabs.Toolkit.FlowflakeId.Abstractions/AmasiaLabs.Toolkit.FlowflakeId.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

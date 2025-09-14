@@ -7,11 +7,12 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host</PackageId>
-    <Version>1.0.2</Version>
+    <Version>1.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../AmasiaLabs.Toolkit.FlowflakeId.Grpc/AmasiaLabs.Toolkit.FlowflakeId.Grpc.csproj" />
+    <ProjectReference Include="../AmasiaLabs.Toolkit.FlowflakeId.Extensions/AmasiaLabs.Toolkit.FlowflakeId.Extensions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

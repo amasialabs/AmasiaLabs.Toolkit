@@ -1,8 +1,9 @@
+using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace AmasiaLabs.Toolkit.FlowflakeId;
+namespace AmasiaLabs.Toolkit.FlowflakeId.Extensions;
 
 public static class ServiceCollectionExtensions
 {

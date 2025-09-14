@@ -1,3 +1,4 @@
+using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 using System.Collections.Concurrent;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
@@ -59,7 +60,7 @@ public sealed class FlowflakeGrpcClient(
     public int GetInstanceId()
         => EnsureServerInfoInitialized().InstanceId;
 
-    public int GetInstanceIdFromGlobalId(long id)
+    public int GetInstanceIdFromFlowflakeId(long id)
     {
         var layout = EnsureServerInfoLayout();
         var instance = (id >> (int)layout.InstanceShift) & (long)layout.InstanceMask;

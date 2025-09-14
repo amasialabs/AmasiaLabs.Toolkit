@@ -1,4 +1,4 @@
-namespace AmasiaLabs.Toolkit.FlowflakeId;
+namespace AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 
 /// <summary>
 /// Controls how time is interpreted when computing Flowflake timestamps.

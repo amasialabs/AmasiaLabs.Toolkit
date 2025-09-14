@@ -1,3 +1,5 @@
+using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
+
 namespace AmasiaLabs.Toolkit.FlowflakeId;
 
 /// <summary>

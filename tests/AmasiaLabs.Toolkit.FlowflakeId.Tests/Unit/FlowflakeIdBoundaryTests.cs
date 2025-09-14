@@ -1,4 +1,5 @@
 using System.Reflection;
+using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;

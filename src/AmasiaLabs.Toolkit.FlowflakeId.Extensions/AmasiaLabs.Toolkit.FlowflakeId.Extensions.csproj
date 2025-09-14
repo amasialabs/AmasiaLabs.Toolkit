@@ -1,15 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
-    <PackageId>AmasiaLabs.Toolkit.FlowflakeId</PackageId>
+    <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Extensions</PackageId>
     <Version>1.2.0</Version>
     <Authors>Roman Stefanov</Authors>
     <Company>Amasia</Company>
-    <Description>Snowflake-like ID generator with configurable epoch/time source (Flowflake)</Description>
+    <Description>DI and formatting extensions for Flowflake ID generator</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
@@ -20,10 +20,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AmasiaLabs.Toolkit.FlowflakeId.Abstractions\AmasiaLabs.Toolkit.FlowflakeId.Abstractions.csproj" />
+    <ProjectReference Include="..\AmasiaLabs.Toolkit.FlowflakeId\AmasiaLabs.Toolkit.FlowflakeId.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
   </ItemGroup>
 
 </Project>

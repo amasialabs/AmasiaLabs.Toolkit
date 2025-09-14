@@ -1,4 +1,4 @@
-using AmasiaLabs.Toolkit.FlowflakeId;
+using AmasiaLabs.Toolkit.FlowflakeId.Extensions;
 using AmasiaLabs.Toolkit.FlowflakeId.Grpc;
 
 var builder = WebApplication.CreateBuilder(args);

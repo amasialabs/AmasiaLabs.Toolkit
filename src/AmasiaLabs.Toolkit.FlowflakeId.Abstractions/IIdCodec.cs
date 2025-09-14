@@ -1,4 +1,4 @@
-namespace AmasiaLabs.Toolkit.FlowflakeId;
+namespace AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 
 /// <summary>
 /// Codec for encoding/decoding long identifiers to/from strings.

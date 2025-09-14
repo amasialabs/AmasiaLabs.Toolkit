@@ -1,3 +1,4 @@
+using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Options;

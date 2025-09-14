@@ -3,6 +3,8 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Net;
 using AmasiaLabs.Toolkit.FlowflakeId;
+using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
+using AmasiaLabs.Toolkit.FlowflakeId.Extensions;
 using AmasiaLabs.Toolkit.FlowflakeId.Grpc;
 using FluentAssertions;
 using Google.Protobuf.WellKnownTypes;

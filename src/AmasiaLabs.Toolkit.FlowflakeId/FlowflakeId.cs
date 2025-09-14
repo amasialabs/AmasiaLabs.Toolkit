@@ -1,3 +1,4 @@
+using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace AmasiaLabs.Toolkit.FlowflakeId;
@@ -35,9 +36,10 @@ public sealed partial class FlowflakeId(
     // ReSharper disable once MemberCanBePrivate.Global
     public long GenerateForDate(DateTime date)
     {
-        long seconds = _semantics == FlowflakeTimeSemantics.LegacyUnspecifiedEpoch
-            ? (long)(DateTime.SpecifyKind(date, DateTimeKind.Unspecified) - DateTime.SpecifyKind(_epochRaw, DateTimeKind.Unspecified)).TotalSeconds
-            : (long)(EnsureUtc(date) - _epochUtc).TotalSeconds;
+        long seconds = (_semantics == FlowflakeTimeSemantics.LegacyUnspecifiedEpoch
+            ? (DateTime.SpecifyKind(date, DateTimeKind.Unspecified) - DateTime.SpecifyKind(_epochRaw, DateTimeKind.Unspecified)).Ticks
+            : (EnsureUtc(date) - _epochUtc).Ticks) / TimeSpan.TicksPerSecond;
+        
         var last = Volatile.Read(ref _lastSeconds);
         var useFailover = _failoverInstanceId.HasValue && seconds < last;
 
@@ -98,8 +100,8 @@ public sealed partial class FlowflakeId(
             ? DateTime.SpecifyKind(_epochRaw, DateTimeKind.Unspecified).Add(TimeSpan.FromSeconds(id >> 31))
             : _epochUtc.Add(TimeSpan.FromSeconds(id >> 31));
 
-    public int GetInstanceIdFromGlobalId(long id) => (int)((id - (id >> 31 << 31)) >> 22);
-
+    public int GetInstanceIdFromFlowflakeId(long id) => (int)((id >> 22) & 0x1FF);
+    
     private void UpdateLastSeconds(long seconds)
     {
         var spinner = new SpinWait();

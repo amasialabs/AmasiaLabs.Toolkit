@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace AmasiaLabs.Toolkit.FlowflakeId;
+namespace AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 
 /// <summary>
 /// Options for Flowflake ID generation.

@@ -1,3 +1,4 @@
+using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
@@ -23,7 +24,7 @@ public class FlowflakeIdTests
         // Act
         var id = await gen.GenerateAsync(TestContext.Current.CancellationToken);
         var dt = gen.GetDateTime(id);
-        var instance = gen.GetInstanceIdFromGlobalId(id);
+        var instance = gen.GetInstanceIdFromFlowflakeId(id);
 
         // Assert
         dt.Should().Be(epoch.AddSeconds(123));
@@ -68,9 +69,9 @@ public class FlowflakeIdTests
         var id2 = await gen.GenerateForDateAsync(earlier, TestContext.Current.CancellationToken); // should use instance=11
         
         var id3 = await gen.GenerateAsync(TestContext.Current.CancellationToken);
-        var inst1 = gen.GetInstanceIdFromGlobalId(id1);
-        var inst2 = gen.GetInstanceIdFromGlobalId(id2);
-        var inst3 = gen.GetInstanceIdFromGlobalId(id3);
+        var inst1 = gen.GetInstanceIdFromFlowflakeId(id1);
+        var inst2 = gen.GetInstanceIdFromFlowflakeId(id2);
+        var inst3 = gen.GetInstanceIdFromFlowflakeId(id3);
 
         // Assert
         inst1.Should().Be(10);

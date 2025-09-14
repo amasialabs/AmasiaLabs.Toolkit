@@ -1,4 +1,6 @@
-namespace AmasiaLabs.Toolkit.FlowflakeId;
+using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
+
+namespace AmasiaLabs.Toolkit.FlowflakeId.Extensions;
 
 /// <summary>
 /// Extension helpers for formatting and parsing Flowflake IDs using a pluggable <see cref="IIdCodec"/>.
