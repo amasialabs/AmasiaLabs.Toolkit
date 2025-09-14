@@ -9,6 +9,7 @@ on:
       - 'AmasiaLabs.Toolkit.Podman/v*'
       - 'AmasiaLabs.Toolkit.FlowflakeId/v*'
       - 'AmasiaLabs.Toolkit.FlowflakeId.Grpc/v*'
+      - 'AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client/v*'
   workflow_dispatch:
 
 jobs:

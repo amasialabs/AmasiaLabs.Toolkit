@@ -31,7 +31,6 @@ public static class ServiceCollectionExtensions
             optionsBuilder.Configure(configure);
         }
 
-        services.TryAddBase62Codec();
         services.TryAddSingleton<TimeProvider>(_ => TimeProvider.System);
         services.AddSingleton<IFlowflakeId, FlowflakeId>();
         return services;
@@ -71,17 +70,8 @@ public static class ServiceCollectionExtensions
             .Validate(static o => o.FailoverInstanceId is null || o.FailoverInstanceId.Value != o.InstanceId,
                 "FlowflakeId: FailoverInstanceId must differ from InstanceId");
 
-        services.TryAddBase62Codec();
         services.TryAddSingleton<TimeProvider>(_ => TimeProvider.System);
         services.AddSingleton<IFlowflakeId, FlowflakeId>();
-        return services;
-    }
-
-    // ReSharper disable once UnusedMethodReturnValue.Local
-    private static IServiceCollection TryAddBase62Codec(this IServiceCollection services)
-    {
-        // Register a default codec only if the app didn't provide one.
-        services.TryAddSingleton<IBase62Codec, NumericBase62Codec>();
         return services;
     }
 }

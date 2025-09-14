@@ -2,9 +2,9 @@ namespace AmasiaLabs.Toolkit.FlowflakeId;
 
 /// <summary>
 /// Default numeric Base62 codec. Note: alphabet may differ from external libraries.
-/// Provide your own <see cref="IBase62Codec"/> for strict compatibility.
+/// Provide your own <see cref="IIdCodec"/> for strict compatibility.
 /// </summary>
-public sealed class NumericBase62Codec : IBase62Codec
+public sealed class NumericBase62Codec : IIdCodec
 {
     private const string Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
@@ -42,4 +42,3 @@ public sealed class NumericBase62Codec : IBase62Codec
         return (long)result;
     }
 }
-

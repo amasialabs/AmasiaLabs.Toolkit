@@ -1,3 +1,4 @@
+extern alias GrpcClient;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Net;
@@ -17,7 +18,7 @@ namespace AmasiaLabs.Toolkit.FlowflakeId.Grpc.Tests.Integration;
 
 public class FlowflakeGrpcTests
 {
-    private static (WebApplication App, FlowflakeIds.FlowflakeIdsClient Client) BuildApp()
+    private static (WebApplication App, GrpcClient::AmasiaLabs.Toolkit.FlowflakeId.Grpc.FlowflakeIds.FlowflakeIdsClient Client) BuildApp()
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
@@ -49,7 +50,7 @@ public class FlowflakeGrpcTests
             HttpClient = httpClient
         });
 
-        var client = new FlowflakeIds.FlowflakeIdsClient(channel);
+        var client = new GrpcClient::AmasiaLabs.Toolkit.FlowflakeId.Grpc.FlowflakeIds.FlowflakeIdsClient(channel);
         return (app, client);
     }
 
@@ -62,7 +63,7 @@ public class FlowflakeGrpcTests
         try
         {
             // Act
-            var resp = await client.GetIdAsync(new Empty());
+            var resp = await client.GetIdAsync(new Empty(), cancellationToken: TestContext.Current.CancellationToken);
             long id = resp.Id;
 
             // Assert
@@ -70,7 +71,7 @@ public class FlowflakeGrpcTests
         }
         finally
         {
-            await app.StopAsync();
+            await app.StopAsync(TestContext.Current.CancellationToken);
         }
     }
 
@@ -83,7 +84,7 @@ public class FlowflakeGrpcTests
         try
         {
             // Act
-            var info = await client.GetServerInfoAsync(new Empty());
+            var info = await client.GetServerInfoAsync(new Empty(), cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             info.InstanceId.Should().Be(5);
@@ -96,7 +97,7 @@ public class FlowflakeGrpcTests
         }
         finally
         {
-            await app.StopAsync();
+            await app.StopAsync(TestContext.Current.CancellationToken);
         }
     }
 
@@ -110,7 +111,7 @@ public class FlowflakeGrpcTests
         try
         {
             // Act
-            var resp = await client.GetIdForDateAsync(new DateRequest { Timestamp = when });
+            var resp = await client.GetIdForDateAsync(new GrpcClient::AmasiaLabs.Toolkit.FlowflakeId.Grpc.DateRequest { Timestamp = when }, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert (timestamp bits equal to provided)
             long id = resp.Id;
@@ -120,8 +121,49 @@ public class FlowflakeGrpcTests
         }
         finally
         {
-            await app.StopAsync();
+            await app.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task GetBatch_Should_Return_N_Ids_In_Ascending_Order()
+    {
+        // Arrange
+        var (app, client) = BuildApp();
+
+        try
+        {
+            // Act
+            var size = 10;
+            var resp = await client.GetBatchAsync(new GrpcClient::AmasiaLabs.Toolkit.FlowflakeId.Grpc.BatchRequest { Size = size }, cancellationToken: TestContext.Current.CancellationToken);
+
+            // Assert
+            resp.Ids.Count.Should().Be(size);
+            resp.Ids.Should().BeInAscendingOrder();
+        }
+        finally
+        {
+            await app.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task GetBatch_Should_Reject_TooLarge_Size_By_Default()
+    {
+        // Arrange
+        var (app, client) = BuildApp();
+
+        try
+        {
+            // Act
+            Func<Task> act = async () => await client.GetBatchAsync(new GrpcClient::AmasiaLabs.Toolkit.FlowflakeId.Grpc.BatchRequest { Size = 10_001 }, cancellationToken: TestContext.Current.CancellationToken);
+
+            // Assert
+            await act.Should().ThrowAsync<global::Grpc.Core.RpcException>();
+        }
+        finally
+        {
+            await app.StopAsync(TestContext.Current.CancellationToken);
         }
     }
 }
-

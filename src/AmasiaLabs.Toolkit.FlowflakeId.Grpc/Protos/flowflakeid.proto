@@ -12,6 +12,8 @@ service FlowflakeIds {
   rpc GetId (google.protobuf.Empty) returns (IdResponse);
   // Generate ID for a provided absolute timestamp
   rpc GetIdForDate (DateRequest) returns (IdResponse);
+  // Generate multiple IDs based on server time source
+  rpc GetBatch (BatchRequest) returns (BatchResponse);
   // Returns server info required for client-side decoding and local helpers
   rpc GetServerInfo (google.protobuf.Empty) returns (ServerInfo);
 }
@@ -28,6 +30,14 @@ message DateRequest {
 
 message IdResponse {
   int64 id = 1;
+}
+
+message BatchRequest {
+  int32 size = 1; // must be > 0
+}
+
+message BatchResponse {
+  repeated int64 ids = 1;
 }
 
 message ServerInfo {

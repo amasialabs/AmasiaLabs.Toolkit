@@ -7,12 +7,11 @@ namespace AmasiaLabs.Toolkit.FlowflakeId;
 /// </summary>
 // ReSharper disable once ClassNeverInstantiated.Global
 public sealed partial class FlowflakeId(
-    IOptions<FlowflakeIdOptions> options, 
-    IBase62Codec base62,
+    IOptions<FlowflakeIdOptions> options,
     TimeProvider timeProvider) : IFlowflakeId
 {
-    private const int MinValue = 1;
-    private const int MaxValue = 2_097_151; // 2^21 - 1 (legacy cap; leaves one spare bit in [0..21])
+    private static readonly int SequenceMin = FlowflakeLayout.Default.SequenceMin;
+    private static readonly int SequenceMax = FlowflakeLayout.Default.SequenceMax;
 
     private readonly DateTime _epochUtc = EnsureUtc(options.Value.Epoch);
     private readonly bool _useUtc = options.Value.UseUtcNow;
@@ -22,9 +21,10 @@ public sealed partial class FlowflakeId(
     private readonly int? _failoverInstanceId = options.Value.FailoverInstanceId;
 
     private readonly Lock _sync = new();
-    private int _sequenceId = MinValue;
+    private int _sequenceId = SequenceMin;
     private long _lastSeconds = -1L;
 
+    // ReSharper disable once MemberCanBePrivate.Global
     public long Generate()
     {
         var now = timeProvider.GetUtcNow();
@@ -32,6 +32,7 @@ public sealed partial class FlowflakeId(
         return GenerateForDate(date);
     }
 
+    // ReSharper disable once MemberCanBePrivate.Global
     public long GenerateForDate(DateTime date)
     {
         long seconds = _semantics == FlowflakeTimeSemantics.LegacyUnspecifiedEpoch
@@ -42,13 +43,13 @@ public sealed partial class FlowflakeId(
 
         var index = Interlocked.Increment(ref _sequenceId);
 
-        if (index > MaxValue)
+        if (index > SequenceMax)
         {
             lock (_sync)
             {
-                if (_sequenceId > MaxValue)
+                if (_sequenceId > SequenceMax)
                 {
-                    Interlocked.Exchange(ref _sequenceId, MinValue);
+                    Interlocked.Exchange(ref _sequenceId, SequenceMin);
                 }
 
                 index = Interlocked.Increment(ref _sequenceId);
@@ -66,6 +67,30 @@ public sealed partial class FlowflakeId(
         return id;
     }
 
+    // ReSharper disable once MemberCanBePrivate.Global
+    public long[] GenerateBatch(int size)
+    {
+        if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size));
+        var result = new long[size];
+        for (var i = 0; i < size; i++)
+        {
+            result[i] = Generate();
+        }
+        return result;
+    }
+
+    // ReSharper disable once MemberCanBePrivate.Global
+    public long[] GenerateBatchForDate(DateTime date, int size)
+    {
+        if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size));
+        var result = new long[size];
+        for (var i = 0; i < size; i++)
+        {
+            result[i] = GenerateForDate(date);
+        }
+        return result;
+    }
+
     public int GetInstanceId() => _instanceId;
 
     public DateTime GetDateTime(long id)
@@ -74,10 +99,6 @@ public sealed partial class FlowflakeId(
             : _epochUtc.Add(TimeSpan.FromSeconds(id >> 31));
 
     public int GetInstanceIdFromGlobalId(long id) => (int)((id - (id >> 31 << 31)) >> 22);
-
-    public string ToBase62(long id) => base62.Encode(id);
-
-    public long FromBase62(string id) => base62.Decode(id);
 
     private void UpdateLastSeconds(long seconds)
     {
@@ -107,8 +128,21 @@ public sealed partial class FlowflakeId(
 public sealed partial class FlowflakeId
 {
     // Convenience ctor for manual usage without DI: uses TimeProvider.System
-    public FlowflakeId(IOptions<FlowflakeIdOptions> options, IBase62Codec base62)
-        : this(options, base62, TimeProvider.System)
+    public FlowflakeId(IOptions<FlowflakeIdOptions> options)
+        : this(options, TimeProvider.System)
     {
     }
+
+    // Async interface implementation
+    public ValueTask<long> GenerateAsync(CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(Generate());
+
+    public ValueTask<long> GenerateForDateAsync(DateTime date, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(GenerateForDate(date));
+
+    public ValueTask<long[]> GenerateBatchAsync(int size, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(GenerateBatch(size));
+
+    public ValueTask<long[]> GenerateBatchForDateAsync(DateTime date, int size, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(GenerateBatchForDate(date, size));
 }

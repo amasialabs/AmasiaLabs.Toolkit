@@ -6,6 +6,8 @@
     <LangVersion>default</LangVersion>
     <InvariantGlobalization>true</InvariantGlobalization>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host</PackageId>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +16,6 @@
 
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" />
+    <PackageReference Include="Grpc.AspNetCore.HealthChecks" />
   </ItemGroup>
 </Project>
-

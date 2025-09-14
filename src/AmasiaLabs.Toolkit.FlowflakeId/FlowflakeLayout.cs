@@ -18,7 +18,6 @@ public sealed record FlowflakeLayout(
         SequenceMask: (1UL << 22) - 1UL, // 0x3F_FFFF
         InstanceMask: 0x1FF,            // 511
         SequenceMin: 1,
-        SequenceMax: 2_097_151          // 2^21 - 1
+        SequenceMax: 4_194_303          // 2^22 - 1
     );
 }
-

@@ -23,9 +23,8 @@ public sealed class FlowflakeIdOptions
 
     /// <summary>
     /// Use DateTime.UtcNow as the default time source when calling Generate().
-    /// Default is false (use DateTime.Now) to preserve legacy behavior.
     /// </summary>
-    public bool UseUtcNow { get; init; } = false;
+    public bool UseUtcNow { get; init; } = true;
 
     /// <summary>
     /// Epoch (starting point) for timestamp calculations. Must be explicitly set by the application.
@@ -34,7 +33,7 @@ public sealed class FlowflakeIdOptions
     public required DateTime Epoch { get; init; }
 
     /// <summary>
-    /// Optional failover instance id used when the system clock moves backward relative to the last seen timestamp.
+    /// Optional failover instance id used when the system clock moves backward relatively to the last seen timestamp.
     /// When set, IDs generated during a clock rollback will use this instance id to avoid collisions across time windows.
     /// Must be in [1..511] and different from <see cref="InstanceId"/>.
     /// </summary>
@@ -43,7 +42,7 @@ public sealed class FlowflakeIdOptions
     public int? FailoverInstanceId { get; init; }
 
     /// <summary>
-    /// Time semantics for computing seconds from epoch.
+    /// Time semantics for computing seconds from an epoch.
     /// Default is UTC-normalized for stable distributed behavior.
     /// Set to <see cref="FlowflakeTimeSemantics.LegacyUnspecifiedEpoch"/> to preserve historical behavior based on DateTime difference without UTC normalization.
     /// </summary>

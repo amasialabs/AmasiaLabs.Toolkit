@@ -68,7 +68,7 @@ public class HmacIntegrationTests
         builder.Services.AddLogging();
         // Provide ProblemHandlingOptions for HMAC challenge/forbid ProblemDetails
         builder.Services.AddSingleton(new ProblemHandlingOptions());
-        // Avoid global exception handler to keep test host minimal
+        // Avoid global exception handler to keep the test host minimal
 
         // Test HMAC dependencies
         builder.Services.AddSingleton<IHmacKeyProvider, TestHmacKeyProvider>();

@@ -38,7 +38,7 @@ public class ProblemDetailsIntegrationTests
         // Assert
         resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
         pd.Should().NotBeNull();
-        pd!.Status.Should().Be(StatusCodes.Status404NotFound);
+        pd.Status.Should().Be(StatusCodes.Status404NotFound);
         pd.Title.Should().Be("Not found");
     }
 
@@ -69,7 +69,7 @@ public class ProblemDetailsIntegrationTests
         // Assert
         resp.StatusCode.Should().Be(HttpStatusCode.MethodNotAllowed);
         pd.Should().NotBeNull();
-        pd!.Status.Should().Be(StatusCodes.Status405MethodNotAllowed);
+        pd.Status.Should().Be(StatusCodes.Status405MethodNotAllowed);
         pd.Title.Should().Be("Method not allowed");
     }
 }

@@ -28,7 +28,7 @@ app.Run();
 
 - GetId(Empty) → IdResponse
 - GetIdForDate(DateRequest) → IdResponse
+- GetBatch(BatchRequest) → BatchResponse
 - GetServerInfo(Empty) → ServerInfo
 
 ServerInfo exposes epoch, UseUtcNow flag, instance ids, and the bit layout, so clients can implement local decoding and formatting (e.g., Base62) without additional network calls.
-

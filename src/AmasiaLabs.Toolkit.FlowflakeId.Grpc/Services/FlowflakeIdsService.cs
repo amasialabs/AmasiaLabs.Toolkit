@@ -6,14 +6,19 @@ namespace AmasiaLabs.Toolkit.FlowflakeId.Grpc.Services;
 
 public sealed class FlowflakeIdsService(
     IFlowflakeId ids,
-    IOptions<FlowflakeIdOptions> options) : FlowflakeIds.FlowflakeIdsBase
+    IOptions<FlowflakeIdOptions> options,
+    IOptions<FlowflakeIdServerOptions>? serverOptions = null) : FlowflakeIds.FlowflakeIdsBase
 {
     private readonly FlowflakeIdOptions _opts = options.Value;
+    private readonly int _maxBatch = (serverOptions?.Value?.MaxBatchSize).GetValueOrDefault(FlowflakeIdServerOptions.DefaultMaxBatchSize);
 
-    public override Task<IdResponse> GetId(Empty request, ServerCallContext context)
-        => Task.FromResult(new IdResponse { Id = ids.Generate() });
+    public override async Task<IdResponse> GetId(Empty request, ServerCallContext context)
+    {
+        var id = await ids.GenerateAsync(context.CancellationToken);
+        return new IdResponse { Id = id };
+    }
 
-    public override Task<IdResponse> GetIdForDate(DateRequest request, ServerCallContext context)
+    public override async Task<IdResponse> GetIdForDate(DateRequest request, ServerCallContext context)
     {
         if (request.Timestamp is null)
             throw new RpcException(new Status(StatusCode.InvalidArgument, "timestamp required"));
@@ -22,8 +27,24 @@ public sealed class FlowflakeIdsService(
         var dto = request.Timestamp.ToDateTimeOffset();
         var dtUtc = dto.UtcDateTime;
 
-        var id = ids.GenerateForDate(dtUtc);
-        return Task.FromResult(new IdResponse { Id = id });
+        var id = await ids.GenerateForDateAsync(dtUtc, context.CancellationToken);
+        return new IdResponse { Id = id };
+    }
+
+    public override async Task<BatchResponse> GetBatch(BatchRequest request, ServerCallContext context)
+    {
+        var size = request.Size;
+        if (size <= 0)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "size must be > 0"));
+
+        // Guardrail: prevent unbounded allocations
+        if (size > _maxBatch)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, $"size too large (max {_maxBatch})"));
+
+        var arr = await ids.GenerateBatchAsync(size, context.CancellationToken);
+        var resp = new BatchResponse();
+        resp.Ids.AddRange(arr);
+        return resp;
     }
 
     public override Task<ServerInfo> GetServerInfo(Empty request, ServerCallContext context)

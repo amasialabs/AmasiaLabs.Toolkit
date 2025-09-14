@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using AmasiaLabs.Toolkit.MinimalApi.Auth.ApiKey;
 using AmasiaLabs.Toolkit.MinimalApi.Problems;
 using FluentAssertions;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -54,11 +53,11 @@ public class ApiKeyIntegrationTests
         var (app, client) = await BuildApp(configureAuth: opts =>
         {
             // Return a subject and a claim that is NOT admin
-            opts.ClaimsFactory = subject => new[]
-            {
+            opts.ClaimsFactory = subject =>
+            [
                 new Claim(ClaimTypes.NameIdentifier, subject),
                 new Claim(ClaimTypes.Role, "user")
-            };
+            ];
         }, configurePolicies: services =>
         {
             services.AddAuthorization(o =>

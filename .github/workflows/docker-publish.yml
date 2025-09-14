@@ -3,9 +3,17 @@ name: docker-publish
 on:
   push:
     branches: [ main ]
+    # Build image when host OR its dependencies change on main
     paths:
       - 'src/AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host/**'
+      - 'src/AmasiaLabs.Toolkit.FlowflakeId.Grpc/**'
+      - 'src/AmasiaLabs.Toolkit.FlowflakeId/**'
+      - 'Directory.Packages.props'
+      - 'global.json'
       - '.github/workflows/docker-publish.yml'
+  # Also build/publish when a release tag is pushed/published
+  release:
+    types: [ published ]
   workflow_dispatch: {}
 
 permissions:
@@ -14,10 +22,15 @@ permissions:
 
 jobs:
   build-and-push:
+    # For release events, only run when the tag is for the Host package
+    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host/') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          # On release, build the exact tag contents
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -29,22 +42,42 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Compute version from tag (release only)
+        id: ver
+        if: github.event_name == 'release'
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.release.tag_name }}"
+          # Support tags like 'v1.2.3' and 'AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host/v1.2.3'
+          if [[ "$TAG" == *"/v"* ]]; then
+            VERSION="${TAG##*/v}"
+          else
+            VERSION="${TAG#v}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/flowflakeid-grpc
           tags: |
-            type=ref,event=branch
-            type=sha
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            # Tag-based versioning (for releases with semver tags like v1.2.3)
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            # Fallback to computed version if using scoped tags like '.../vX.Y.Z'
+            type=raw,value=${{ steps.ver.outputs.version }},enable=${{ github.event_name == 'release' }}
+            # Latest tag only on release (point latest to the last release)
+            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           file: src/AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host/Dockerfile
-          push: true
+          # Push only on release; on main just build to validate
+          push: ${{ github.event_name == 'release' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-

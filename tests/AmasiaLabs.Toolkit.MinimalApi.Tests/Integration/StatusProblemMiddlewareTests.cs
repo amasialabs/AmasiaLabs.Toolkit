@@ -31,7 +31,7 @@ public class StatusProblemMiddlewareTests
         app.UseProblemConflict();
         app.UseProblemUnprocessableContent();
 
-        app.MapGet("/t", (HttpContext ctx) => { ctx.Response.StatusCode = code; return Task.CompletedTask; });
+        app.MapGet("/t", (ctx) => { ctx.Response.StatusCode = code; return Task.CompletedTask; });
 
         await app.StartAsync(TestContext.Current.CancellationToken);
         var client = app.GetTestClient();
@@ -57,7 +57,7 @@ public class StatusProblemMiddlewareTests
 
         var app = builder.Build();
         app.UseProblemTooManyRequests();
-        app.MapGet("/t", (HttpContext ctx) => { ctx.Response.StatusCode = StatusCodes.Status429TooManyRequests; return Task.CompletedTask; });
+        app.MapGet("/t", (ctx) => { ctx.Response.StatusCode = StatusCodes.Status429TooManyRequests; return Task.CompletedTask; });
 
         await app.StartAsync(TestContext.Current.CancellationToken);
         var client = app.GetTestClient();

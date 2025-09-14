@@ -5,11 +5,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
-    <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Grpc</PackageId>
-    <Version>1.0.1</Version>
+    <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client</PackageId>
+    <Version>1.1.1</Version>
     <Authors>Roman Stefanov</Authors>
     <Company>Amasia</Company>
-    <Description>gRPC service wrapper around Flowflake ID generator (IFlowflakeId)</Description>
+    <Description>gRPC client SDK for Flowflake ID service with failover and ServerInfo caching</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
@@ -19,17 +19,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Grpc.AspNetCore" />
+    <PackageReference Include="Grpc.Net.Client" />
     <PackageReference Include="Google.Protobuf" />
     <PackageReference Include="Grpc.Tools" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
   </ItemGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Protobuf Include="Protos/flowflakeid.proto" GrpcServices="Server" CompileOutputs="true" />
+    <Protobuf Include="../AmasiaLabs.Toolkit.FlowflakeId.Grpc/Protos/flowflakeid.proto" GrpcServices="Client" CompileOutputs="true" Link="Protos/flowflakeid.proto" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,4 +35,3 @@
   </ItemGroup>
 
 </Project>
-

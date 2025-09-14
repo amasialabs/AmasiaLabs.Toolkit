@@ -35,7 +35,7 @@ You can also bind from any custom section path by passing it to `AddFlowflakeId(
 
 - Bits 31..63: seconds since epoch (you must set `Epoch` explicitly)
 - Bits 22..30: instance id (1..511)
-- Bits 0..21: sequence (internally capped to 2^21-1 for compatibility)
+- Bits 0..21: sequence (22 bits, max 2^22-1)
 
 Defaults mirror modern, UTC-normalized behavior (safer for distributed systems). To preserve legacy behavior, set `TimeSemantics = LegacyUnspecifiedEpoch`.
 
@@ -64,7 +64,7 @@ builder.Services.AddFlowflakeId(o =>
 var app = builder.Build();
 
 var ids = app.Services.GetRequiredService<IFlowflakeId>();
-var id = ids.Generate();
+var id = await ids.GenerateAsync();
 ```
 
 ### API
@@ -72,14 +72,15 @@ var id = ids.Generate();
 ```csharp
 public interface IFlowflakeId
 {
-    long Generate();
-    long GenerateForDate(DateTime date);
+    ValueTask<long> GenerateAsync(CancellationToken cancellationToken = default);
+    ValueTask<long> GenerateForDateAsync(DateTime date, CancellationToken cancellationToken = default);
+    ValueTask<long[]> GenerateBatchAsync(int size, CancellationToken cancellationToken = default);
+    ValueTask<long[]> GenerateBatchForDateAsync(DateTime date, int size, CancellationToken cancellationToken = default);
     int GetInstanceId();
     int GetInstanceIdFromGlobalId(long id);
     DateTime GetDateTime(long id);
-    string ToBase62(long id);
-    long FromBase62(string id);
 }
+```
 
 ### Testing time-dependent behavior
 
@@ -89,11 +90,11 @@ Inject a custom `TimeProvider` (e.g., `FakeTimeProvider` from `Microsoft.Extensi
 var epoch = new DateTime(2023, 02, 15, 0, 0, 0, DateTimeKind.Utc);
 var fake = new FakeTimeProvider(new DateTimeOffset(epoch).AddSeconds(10));
 var options = Options.Create(new FlowflakeIdOptions { InstanceId = 1, UseUtcNow = true, Epoch = epoch });
-var gen = new FlowflakeId(options, new NumericBase62Codec(), fake);
+var gen = new FlowflakeId(options, fake);
 
-var id1 = gen.Generate();
+var id1 = await gen.GenerateAsync();
 fake.Advance(TimeSpan.FromSeconds(1));
-var id2 = gen.Generate();
+var id2 = await gen.GenerateAsync();
 ```
 
 ## Time Semantics
@@ -107,6 +108,28 @@ var id2 = gen.Generate();
   - Use only to maintain exact continuity of existing IDs; prefer `UtcNormalized` for new systems.
 ```
 
-### Base62
+### Formatting (Codecs)
 
-Base62 codec is pluggable. The default codec performs numeric base62 encode/decode for long values. If you need compatibility with a specific external Base62 format, register your own `IBase62Codec` in DI before calling `AddFlowflakeId`.
+Formatting/parsing of IDs is decoupled from `IFlowflakeId`.
+
+- Use `IIdCodec` to plug different formats (default: `NumericBase62Codec`).
+- Extension helpers are available: `FormatId` and `ParseId`.
+
+```csharp
+var codec = new NumericBase62Codec();
+var id = await gen.GenerateAsync();
+
+// Using the codec directly
+string text = codec.Encode(id);
+long back = codec.Decode(text);
+
+// Or via extensions
+string text2 = id.FormatId(codec);
+long back2 = text2.ParseId(codec);
+```
+
+## Backlog
+
+- gRPC client SDK: segment/lease RPC to allow local ID generation between refreshes.
+- Optional async-first `IFlowflakeId` variant for non-blocking remote calls.
+- Full-local mode bootstrap (allocate free instance id from a coordinator). Not planned yet.

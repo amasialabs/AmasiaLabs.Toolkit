@@ -1,10 +1,11 @@
-﻿<Solution>
+<Solution>
   <Folder Name="/src/">
     <Project Path="src\AmasiaLabs.Toolkit.MinimalApi\AmasiaLabs.Toolkit.MinimalApi.csproj" Type="Classic C#" />
     <Project Path="src\AmasiaLabs.Toolkit.Podman\AmasiaLabs.Toolkit.Podman.csproj" Type="Classic C#" />
     <Project Path="src\AmasiaLabs.Toolkit.FlowflakeId\AmasiaLabs.Toolkit.FlowflakeId.csproj" Type="Classic C#" />
     <Project Path="src\AmasiaLabs.Toolkit.FlowflakeId.Grpc\AmasiaLabs.Toolkit.FlowflakeId.Grpc.csproj" Type="Classic C#" />
     <Project Path="src\AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host\AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host.csproj" Type="Classic C#" />
+    <Project Path="src\AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client\AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client.csproj" Type="Classic C#" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests\AmasiaLabs.Toolkit.MinimalApi.Tests\AmasiaLabs.Toolkit.MinimalApi.Tests.csproj" Type="Classic C#" />
@@ -13,3 +14,4 @@
     <Project Path="tests\AmasiaLabs.Toolkit.FlowflakeId.Grpc.Tests\AmasiaLabs.Toolkit.FlowflakeId.Grpc.Tests.csproj" Type="Classic C#" />
   </Folder>
 </Solution>
+
