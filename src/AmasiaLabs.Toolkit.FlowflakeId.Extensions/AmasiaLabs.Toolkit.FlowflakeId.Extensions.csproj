@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
     <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Extensions</PackageId>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Authors>Roman Stefanov</Authors>
     <Company>Amasia</Company>
     <Description>DI and formatting extensions for Flowflake ID generator</Description>

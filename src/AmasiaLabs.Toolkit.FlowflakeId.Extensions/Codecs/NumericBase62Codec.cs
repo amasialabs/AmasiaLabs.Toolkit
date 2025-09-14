@@ -1,6 +1,6 @@
 using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 
-namespace AmasiaLabs.Toolkit.FlowflakeId;
+namespace AmasiaLabs.Toolkit.FlowflakeId.Extensions.Codecs;
 
 /// <summary>
 /// Default numeric Base62 codec. Note: alphabet may differ from external libraries.

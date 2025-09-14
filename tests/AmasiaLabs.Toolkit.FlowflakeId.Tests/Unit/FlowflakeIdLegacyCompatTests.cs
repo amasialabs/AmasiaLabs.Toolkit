@@ -1,4 +1,5 @@
 using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
+using AmasiaLabs.Toolkit.FlowflakeId.Extensions.Codecs;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Xunit;

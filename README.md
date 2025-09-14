@@ -7,6 +7,7 @@
 - AmasiaLabs.Toolkit.MinimalApi — ASP.NET Core Minimal API extensions. See `src/AmasiaLabs.Toolkit.MinimalApi/README.md`.
 - AmasiaLabs.Toolkit.Podman — Podman/Docker secrets configuration helpers. See `src/AmasiaLabs.Toolkit.Podman/README.md`.
 - AmasiaLabs.Toolkit.FlowflakeId — Snowflake-like ID generator with configurable epoch/time source. See `src/AmasiaLabs.Toolkit.FlowflakeId/README.md`.
+- AmasiaLabs.Toolkit.FlowflakeId.Extensions — DI integration and encoding/decoding codecs (Base36, Base58, Base62, Base64Url, Bech32, CrockfordBase32, Hex). See `src/AmasiaLabs.Toolkit.FlowflakeId.Extensions/README.md`.
 - AmasiaLabs.Toolkit.FlowflakeId.Grpc — gRPC service wrapper around the Flowflake generator. See `src/AmasiaLabs.Toolkit.FlowflakeId.Grpc/README.md`.
 - AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client — gRPC client SDK that implements `IFlowflakeId`, with failover and ServerInfo caching. See `src/AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client/README.md`.
 
@@ -18,6 +19,7 @@ Packages are available via GitHub Packages:
 dotnet add package AmasiaLabs.Toolkit.MinimalApi
 dotnet add package AmasiaLabs.Toolkit.Podman
 dotnet add package AmasiaLabs.Toolkit.FlowflakeId
+dotnet add package AmasiaLabs.Toolkit.FlowflakeId.Extensions
 dotnet add package AmasiaLabs.Toolkit.FlowflakeId.Grpc
 dotnet add package AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client
 ```
