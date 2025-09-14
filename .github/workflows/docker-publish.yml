@@ -4,17 +4,18 @@ on:
   workflow_run:
     workflows: [ "Auto Tag & Release" ]
     types: [ completed ]
-  workflow_dispatch: {}
 
 permissions:
   contents: read
   packages: write
 
 jobs:
-  build-and-push:
-    # Run only if Auto Tag & Release succeeded
+  discover:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.out.outputs.matrix }}
+      count: ${{ steps.out.outputs.count }}
     steps:
       - name: Checkout repository at Auto Tag commit
         uses: actions/checkout@v5
@@ -22,8 +23,9 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
-      - name: Find Host tag on this commit
-        id: discover
+      - name: Build image matrix from tags
+        id: out
+        shell: bash
         run: |
           set -euo pipefail
           SHA="${{ github.event.workflow_run.head_sha }}"
@@ -32,36 +34,71 @@ jobs:
           TAGS=$(git tag --points-at "$SHA" || true)
           echo "Tags on HEAD:\n$TAGS"
 
-          HOST_TAG=$(echo "$TAGS" | grep -E '^AmasiaLabs\.Toolkit\.FlowflakeId\.Grpc\.Host/v[0-9]+' | head -n1 || true)
-          if [[ -z "${HOST_TAG:-}" ]]; then
-            echo "No Host tag found. Skipping build."
-            echo "host_tag=" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          MATRIX='[]'
 
-          echo "Host tag: $HOST_TAG"
-          echo "host_tag=$HOST_TAG" >> "$GITHUB_OUTPUT"
+          while IFS= read -r tag; do
+            # Expect tags like '<PackageId>/vX.Y.Z'
+            [[ -z "${tag:-}" ]] && continue
+            [[ "$tag" != */v* ]] && continue
 
-          if [[ "$HOST_TAG" == *"/v"* ]]; then
-            VERSION="${HOST_TAG##*/v}"
-          else
-            VERSION="${HOST_TAG#v}"
-          fi
+            pkg="${tag%%/v*}"
+            ver="${tag##*/v}"
+            [[ -z "$pkg" || -z "$ver" ]] && continue
 
-          MAJOR="${VERSION%%.*}"
-          MINOR_PART="${VERSION#*.}"; MINOR="${MINOR_PART%%.*}"
+            dockerfile="src/$pkg/Dockerfile"
+            if [[ ! -f "$dockerfile" ]]; then
+              continue
+            fi
 
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "major=$MAJOR" >> "$GITHUB_OUTPUT"
-          echo "minor=$MINOR" >> "$GITHUB_OUTPUT"
-          echo "major_minor=$MAJOR.$MINOR" >> "$GITHUB_OUTPUT"
+            # Derive image short name from PackageId
+            name="$pkg"
+            name="${name#AmasiaLabs.Toolkit.}"
+            name="${name%.Host}"
+            name=$(echo "$name" | tr '[:upper:]' '[:lower:]' | sed 's/\./-/g')
+            repo="ghcr.io/${{ github.repository_owner }}/$name"
+
+            major="${ver%%.*}"
+            minor_part="${ver#*.}"; minor="${minor_part%%.*}"
+            major_minor="$major.$minor"
+
+            item=$(jq -nc \
+              --arg dockerfile "$dockerfile" \
+              --arg image_repo "$repo" \
+              --arg version "$ver" \
+              --arg major "$major" \
+              --arg minor "$minor" \
+              --arg major_minor "$major_minor" \
+              '{dockerfile:$dockerfile,image_repo:$image_repo,version:$version,major:$major,minor:$minor,major_minor:$major_minor}')
+
+            MATRIX=$(jq -c --argjson item "$item" '. + [ $item ]' <<<"$MATRIX")
+          done <<< "$TAGS"
+
+          COUNT=$(jq -r 'length' <<<"$MATRIX")
+          echo "Discovered $COUNT image(s) to build."
+          echo "Matrix: $MATRIX"
+
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+  build-and-push:
+    needs: discover
+    if: ${{ needs.discover.outputs.count != '0' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    steps:
+      - name: Checkout repository at Auto Tag commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
 
       - name: Set up Docker Buildx
-        if: ${{ steps.discover.outputs.host_tag != '' }}
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
-        if: ${{ steps.discover.outputs.host_tag != '' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -69,14 +106,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
-        if: ${{ steps.discover.outputs.host_tag != '' }}
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host/Dockerfile
+          file: ${{ matrix.dockerfile }}
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/flowflakeid-grpc:${{ steps.discover.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/flowflakeid-grpc:${{ steps.discover.outputs.major_minor }}
-            ghcr.io/${{ github.repository_owner }}/flowflakeid-grpc:${{ steps.discover.outputs.major }}
-            ghcr.io/${{ github.repository_owner }}/flowflakeid-grpc:latest
+            ${{ matrix.image_repo }}:${{ matrix.version }}
+            ${{ matrix.image_repo }}:${{ matrix.major_minor }}
+            ${{ matrix.image_repo }}:${{ matrix.major }}
+            ${{ matrix.image_repo }}:latest
