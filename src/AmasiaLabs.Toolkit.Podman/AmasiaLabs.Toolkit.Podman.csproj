@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <LangVersion>default</LangVersion>
         <PackageId>AmasiaLabs.Toolkit.Podman</PackageId>
-        <Version>1.0.3</Version>
+        <Version>1.0.4</Version>
         <Authors>Roman Stefanov</Authors>
         <Company>Amasia</Company>
         <Description>Toolkit for Podman integration in .NET applications</Description>

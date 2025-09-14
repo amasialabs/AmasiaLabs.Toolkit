@@ -1,19 +1,9 @@
-name: docker-publish
+name: Docker Publish
 
 on:
-  push:
-    branches: [ main ]
-    # Build image when host OR its dependencies change on main
-    paths:
-      - 'src/AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host/**'
-      - 'src/AmasiaLabs.Toolkit.FlowflakeId.Grpc/**'
-      - 'src/AmasiaLabs.Toolkit.FlowflakeId/**'
-      - 'Directory.Packages.props'
-      - 'global.json'
-      - '.github/workflows/docker-publish.yml'
-  # Also build/publish when a release tag is pushed/published
-  release:
-    types: [ published ]
+  workflow_run:
+    workflows: [ "Auto Tag & Release" ]
+    types: [ completed ]
   workflow_dispatch: {}
 
 permissions:
@@ -22,62 +12,71 @@ permissions:
 
 jobs:
   build-and-push:
-    # For release events, only run when the tag is for the Host package
-    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host/') }}
+    # Run only if Auto Tag & Release succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository at Auto Tag commit
         uses: actions/checkout@v5
         with:
-          # On release, build the exact tag contents
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Find Host tag on this commit
+        id: discover
+        run: |
+          set -euo pipefail
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          echo "Head SHA from Auto Tag: $SHA"
+          git fetch --tags --force
+          TAGS=$(git tag --points-at "$SHA" || true)
+          echo "Tags on HEAD:\n$TAGS"
+
+          HOST_TAG=$(echo "$TAGS" | grep -E '^AmasiaLabs\.Toolkit\.FlowflakeId\.Grpc\.Host/v[0-9]+' | head -n1 || true)
+          if [[ -z "${HOST_TAG:-}" ]]; then
+            echo "No Host tag found. Skipping build."
+            echo "host_tag=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Host tag: $HOST_TAG"
+          echo "host_tag=$HOST_TAG" >> "$GITHUB_OUTPUT"
+
+          if [[ "$HOST_TAG" == *"/v"* ]]; then
+            VERSION="${HOST_TAG##*/v}"
+          else
+            VERSION="${HOST_TAG#v}"
+          fi
+
+          MAJOR="${VERSION%%.*}"
+          MINOR_PART="${VERSION#*.}"; MINOR="${MINOR_PART%%.*}"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "major=$MAJOR" >> "$GITHUB_OUTPUT"
+          echo "minor=$MINOR" >> "$GITHUB_OUTPUT"
+          echo "major_minor=$MAJOR.$MINOR" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
+        if: ${{ steps.discover.outputs.host_tag != '' }}
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
+        if: ${{ steps.discover.outputs.host_tag != '' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compute version from tag (release only)
-        id: ver
-        if: github.event_name == 'release'
-        run: |
-          set -euo pipefail
-          TAG="${{ github.event.release.tag_name }}"
-          # Support tags like 'v1.2.3' and 'AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host/v1.2.3'
-          if [[ "$TAG" == *"/v"* ]]; then
-            VERSION="${TAG##*/v}"
-          else
-            VERSION="${TAG#v}"
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/flowflakeid-grpc
-          tags: |
-            # Tag-based versioning (for releases with semver tags like v1.2.3)
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            # Fallback to computed version if using scoped tags like '.../vX.Y.Z'
-            type=raw,value=${{ steps.ver.outputs.version }},enable=${{ github.event_name == 'release' }}
-            # Latest tag only on release (point latest to the last release)
-            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
-
-      - name: Build and push
+      - name: Build and push image
+        if: ${{ steps.discover.outputs.host_tag != '' }}
         uses: docker/build-push-action@v6
         with:
           context: .
           file: src/AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host/Dockerfile
-          # Push only on release; on main just build to validate
-          push: ${{ github.event_name == 'release' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/flowflakeid-grpc:${{ steps.discover.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/flowflakeid-grpc:${{ steps.discover.outputs.major_minor }}
+            ghcr.io/${{ github.repository_owner }}/flowflakeid-grpc:${{ steps.discover.outputs.major }}
+            ghcr.io/${{ github.repository_owner }}/flowflakeid-grpc:latest

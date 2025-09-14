@@ -1,19 +1,15 @@
 name: Build & Publish NuGet
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'AmasiaLabs.Toolkit.MinimalApi/v*'
-      - 'AmasiaLabs.Toolkit.Podman/v*'
-      - 'AmasiaLabs.Toolkit.FlowflakeId/v*'
-      - 'AmasiaLabs.Toolkit.FlowflakeId.Grpc/v*'
-      - 'AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client/v*'
+  # Run after Auto Tag & Release completes to avoid GITHUB_TOKEN chaining limits
+  workflow_run:
+    workflows: ["Auto Tag & Release"]
+    types: [completed]
   workflow_dispatch:
 
 jobs:
   publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -36,32 +32,19 @@ jobs:
       - name: Pack all
         run: dotnet pack --configuration Release --no-build --output ./artifacts
 
-      - name: Publish new NuGet packages to GitHub Packages (on tag)
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Publish new NuGet packages to GitHub Packages (tags from Auto Tag)
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_PAT }}
           GH_OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
 
-          TAG="${GITHUB_REF_NAME}"
-          echo "Tag: $TAG"
-
-          PKG_FILTER=""
-          VERSION_FROM_TAG=""
-
-          # If tag is scoped like 'PackageId/v1.2.3', filter by package and enforce version match
-          if [[ "$TAG" == *"/"* ]]; then
-            PKG_FILTER="${TAG%%/*}"
-            VPART="${TAG##*/}"
-            VERSION_FROM_TAG="${VPART#v}"
-            echo "Scoped tag detected. Package: $PKG_FILTER, Version: $VERSION_FROM_TAG"
-          else
-            # Global tag like 'v1.2.3' (no package filter)
-            VPART="${TAG#v}"
-            VERSION_FROM_TAG="$VPART"
-            echo "Global tag detected. Version: $VERSION_FROM_TAG"
-          fi
+          # Use the head SHA from Auto Tag workflow and find tags pointing at it
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          echo "Head SHA from Auto Tag: $SHA"
+          git fetch --tags --force
+          TAGS=$(git tag --points-at "$SHA" || true)
+          echo "Tags on HEAD:\n$TAGS"
 
           for pkg in ./artifacts/*.nupkg; do
             # Extract Id and Version from the nuspec inside the nupkg
@@ -73,14 +56,17 @@ jobs:
               continue
             fi
 
-            if [[ -n "$PKG_FILTER" && "$spec_id" != "$PKG_FILTER" ]]; then
-              echo "Skipping $spec_id due to tag package filter $PKG_FILTER"
-              continue
+            # Determine if a matching tag exists for this package/version
+            MATCHED=false
+            if echo "$TAGS" | grep -qx "$spec_id/v$spec_version"; then
+              MATCHED=true
+            elif echo "$TAGS" | grep -qx "v$spec_version"; then
+              MATCHED=true
             fi
 
-            if [[ -n "$PKG_FILTER" && "$spec_version" != "$VERSION_FROM_TAG" ]]; then
-              echo "Version mismatch for $spec_id: package=$spec_version != tag=$VERSION_FROM_TAG"
-              exit 1
+            if [[ "$MATCHED" != "true" ]]; then
+              echo "No matching tag for $spec_id $spec_version, skipping."
+              continue
             fi
 
             nameLower=$(echo "$spec_id" | tr '[:upper:]' '[:lower:]')
