@@ -2,12 +2,33 @@ using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 
 namespace AmasiaLabs.Toolkit.FlowflakeId.Extensions;
 
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers Flowflake clock configuration without ID generation capabilities.
+    /// Gets configuration from registered IConfiguration service.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="sectionPath">The configuration section path. Defaults to "Amasia:Toolkit:FlowflakeId:FlowflakeClock".</param>
+    public static IServiceCollection AddFlowflakeClock(
+        this IServiceCollection services,
+        string? sectionPath = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var path = sectionPath ?? $"{FlowflakeIdOptions.DefaultSectionPath}:FlowflakeClock";
+
+        services
+            .AddOptionsWithValidateOnStart<FlowflakeClockOptions>()
+            .BindConfiguration(path)
+            .ValidateDataAnnotations();
+
+        return services;
+    }
+
     /// <summary>
     /// Registers Flowflake clock configuration without ID generation capabilities.
     /// </summary>
@@ -29,6 +50,38 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection(path))
             .ValidateDataAnnotations();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Registers Flowflake ID services using configuration from registered IConfiguration service.
+    /// Uses the default section path "Amasia:Toolkit:FlowflakeId".
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">Optional action to configure options.</param>
+    public static IServiceCollection AddFlowflakeId(
+        this IServiceCollection services,
+        Action<FlowflakeIdOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var path = FlowflakeIdOptions.DefaultSectionPath;
+
+        var optionsBuilder = services
+            .AddOptionsWithValidateOnStart<FlowflakeIdOptions>()
+            .BindConfiguration(path)
+            .ValidateDataAnnotations()
+            .Validate(static o => o.FlowflakeClock.Epoch > DateTime.MinValue, "FlowflakeId: FlowflakeClock.Epoch must be set")
+            .Validate(static o => o.FailoverInstanceId is null || o.FailoverInstanceId.Value != o.InstanceId,
+                "FlowflakeId: FailoverInstanceId must differ from InstanceId");
+
+        if (configure is not null)
+        {
+            optionsBuilder.Configure(configure);
+        }
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<IFlowflakeId, FlowflakeId>();
         return services;
     }
 
@@ -57,7 +110,7 @@ public static class ServiceCollectionExtensions
             optionsBuilder.Configure(configure);
         }
 
-        services.TryAddSingleton<TimeProvider>(TimeProvider.System);
+        services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IFlowflakeId, FlowflakeId>();
         return services;
     }
@@ -76,28 +129,5 @@ public static class ServiceCollectionExtensions
         var path = sectionPath ?? FlowflakeIdOptions.DefaultSectionPath;
         var section = configuration.GetSection(path);
         return services.AddFlowflakeId(section, configure);
-    }
-
-    /// <summary>
-    /// Registers Flowflake ID using only code-based configuration.
-    /// </summary>
-    public static IServiceCollection AddFlowflakeId(
-        this IServiceCollection services,
-        Action<FlowflakeIdOptions> configure)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configure);
-
-        services
-            .AddOptionsWithValidateOnStart<FlowflakeIdOptions>()
-            .Configure(configure)
-            .ValidateDataAnnotations()
-            .Validate(static o => o.FlowflakeClock.Epoch > DateTime.MinValue, "FlowflakeId: FlowflakeClock.Epoch must be set")
-            .Validate(static o => o.FailoverInstanceId is null || o.FailoverInstanceId.Value != o.InstanceId,
-                "FlowflakeId: FailoverInstanceId must differ from InstanceId");
-
-        services.TryAddSingleton<TimeProvider>(TimeProvider.System);
-        services.AddSingleton<IFlowflakeId, FlowflakeId>();
-        return services;
     }
 }

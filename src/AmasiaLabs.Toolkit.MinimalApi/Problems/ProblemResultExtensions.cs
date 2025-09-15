@@ -31,7 +31,7 @@ public static class ProblemResultExtensions
             ["traceId"] = ctx.TraceIdentifier
         };
 
-        if (extensions != null)
+        if (extensions is not null)
         {
             foreach (var kv in extensions)
                 ext[kv.Key] = kv.Value;

@@ -13,7 +13,7 @@ public static class FlowflakeIdParsingExtensions
     /// <param name="id">The Flowflake ID.</param>
     /// <returns>The instance ID encoded in the ID.</returns>
     public static int GetInstanceIdFromFlowflakeId(this long id)
-        => (int)((ulong)id >> (int)FlowflakeLayout.Default.InstanceShift & FlowflakeLayout.Default.InstanceMask);
+        => (int)((ulong)id >>> (int)FlowflakeLayout.Default.InstanceShift & FlowflakeLayout.Default.InstanceMask);
 
     /// <summary>
     /// Extracts the sequence number from a Flowflake ID.
@@ -28,11 +28,12 @@ public static class FlowflakeIdParsingExtensions
     /// </summary>
     /// <param name="id">The Flowflake ID.</param>
     /// <returns>The timestamp in seconds since epoch.</returns>
+    // ReSharper disable once MemberCanBePrivate.Global
     public static long GetTimestampFromFlowflakeId(this long id)
-        => (long)((ulong)id >> (int)FlowflakeLayout.Default.TimestampShift);
+        => (long)((ulong)id >>> (int)FlowflakeLayout.Default.TimestampShift);
 
     /// <summary>
-    /// Decodes the DateTime from a Flowflake ID using the provided clock (epoch + semantics).
+    /// Decodes the DateTime from a Flowflake ID using the provided clock (epoch and semantics).
     /// </summary>
     /// <param name="id">The Flowflake ID.</param>
     /// <param name="clock">The clock configuration containing epoch and time semantics.</param>
@@ -47,11 +48,12 @@ public static class FlowflakeIdParsingExtensions
     /// <param name="epoch">The epoch date.</param>
     /// <param name="semantics">The time semantics to use.</param>
     /// <returns>The DateTime decoded from the ID.</returns>
+    // ReSharper disable once MemberCanBePrivate.Global
     public static DateTime GetDateTimeFromFlowflakeId(this long id, DateTime epoch, FlowflakeTimeSemantics semantics)
         => id.GetDateTimeFromFlowflakeId(new FlowflakeClock(epoch, semantics));
 
     /// <summary>
-    /// Decodes the DateTime from a Flowflake ID using options (epoch + semantics).
+    /// Decodes the DateTime from a Flowflake ID using options (epoch and semantics).
     /// </summary>
     /// <param name="id">The Flowflake ID.</param>
     /// <param name="options">The options containing epoch and time semantics.</param>

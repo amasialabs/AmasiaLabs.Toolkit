@@ -44,12 +44,17 @@ Defaults mirror modern, UTC-normalized behavior (safer for distributed systems).
 ## Usage
 
 ```csharp
-using AmasiaLabs.Toolkit.FlowflakeId;
+using AmasiaLabs.Toolkit.FlowflakeId.Extensions;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// Default path: "Amasia:Toolkit:FlowflakeId"
-// TimeProvider is registered as TimeProvider.System by default.
+// Simplest - uses IConfiguration from DI, reads from "Amasia:Toolkit:FlowflakeId"
+builder.Services.AddFlowflakeId();
+
+// Or with additional configuration
+builder.Services.AddFlowflakeId(o => o.FailoverInstanceId = 999);
+
+// Or bind from explicit configuration
 builder.Services.AddFlowflakeId(builder.Configuration);
 
 // Or bind from a custom path
@@ -139,7 +144,10 @@ var id2 = await gen.GenerateAsync();
 For services that only need to decode DateTime from existing IDs without generating new ones:
 
 ```csharp
-// Configure only the clock (no InstanceId required)
+// Simplest - uses IConfiguration from DI
+builder.Services.AddFlowflakeClock();
+
+// Or with explicit configuration
 builder.Services.AddFlowflakeClock(builder.Configuration);
 
 // Usage

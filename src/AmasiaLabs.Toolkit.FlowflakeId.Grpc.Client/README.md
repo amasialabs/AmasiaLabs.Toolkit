@@ -49,7 +49,7 @@ app.Run();
 
 Note: Do not register both the local generator (`AddFlowflakeId`) and the gRPC client at the same time for the same `IFlowflakeId`.
 
-Decode helpers (`GetDateTime`, `GetInstanceIdFromGlobalId`) are synchronous and rely on cached `ServerInfo` (epoch/layout). Call any async method (e.g., `GenerateAsync`) once to initialize before using them. For text formatting/parsing, use an `IIdCodec` (e.g., `NumericBase62Codec`) and the `FormatId`/`ParseId` extensions.
+DateTime extraction and component parsing use extension methods from `AmasiaLabs.Toolkit.FlowflakeId.Extensions`. The gRPC client caches `ServerInfo` (epoch/layout) from the server - call any async method (e.g., `GenerateAsync`) once to initialize before using decode extensions. For text formatting/parsing, use the extensions from `FlowflakeId.Extensions` package.
 
 ## Backlog
 
