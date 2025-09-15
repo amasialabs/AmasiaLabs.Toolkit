@@ -1,22 +1,13 @@
-using AmasiaLabs.Toolkit.FlowflakeId.Extensions;
-using AmasiaLabs.Toolkit.FlowflakeId.Grpc;
+using AmasiaLabs.Toolkit.FlowflakeId.Grpc.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Flowflake options: default path "Amasia:Toolkit:FlowflakeId"
-builder.Services.AddFlowflakeId(builder.Configuration);
-
-// gRPC
-builder.Services.AddGrpc();
+builder.AddFlowflakeServer();
 builder.Services.AddGrpcHealthChecks();
-// Optional: bind server options (e.g., MaxBatchSize) from the configuration
-builder.Services.AddOptionsWithValidateOnStart<FlowflakeIdServerOptions>()
-    .Bind(builder.Configuration.GetSection(FlowflakeIdServerOptions.DefaultSectionPath))
-    .ValidateDataAnnotations();
 
 var app = builder.Build();
 
-app.MapFlowflakeIdGrpc();
+app.MapFlowflakeServer();
 app.MapGrpcHealthChecksService();
 
 app.Run();

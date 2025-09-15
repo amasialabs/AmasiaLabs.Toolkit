@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client;
 
-public static class FlowflakeGrpcClientServiceCollectionExtensions
+public static class FlowflakeIdGrpcClientServiceCollectionExtensions
 {
     /// <summary>
     /// Registers gRPC-based FlowflakeId client and binds options from configuration.
@@ -46,7 +46,7 @@ public static class FlowflakeGrpcClientServiceCollectionExtensions
         }
 
         // gRPC client-based IFlowflakeId
-        services.AddSingleton<IFlowflakeId, FlowflakeGrpcClient>();
+        services.AddSingleton<IFlowflakeId, FlowflakeIdGrpcClient>();
         return services;
     }
 }

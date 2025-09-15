@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
     <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client</PackageId>
-    <Version>1.4.1</Version>
+    <Version>1.4.2</Version>
     <Authors>Roman Stefanov</Authors>
     <Company>Amasia</Company>
     <Description>gRPC client SDK for Flowflake ID service with failover and ServerInfo caching</Description>

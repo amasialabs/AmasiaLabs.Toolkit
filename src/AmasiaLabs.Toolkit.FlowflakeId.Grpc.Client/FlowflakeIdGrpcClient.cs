@@ -12,7 +12,7 @@ namespace AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client;
 /// Fetches and caches ServerInfo, performs failover across configured addresses,
 /// and decodes timestamps/instance locally.
 /// </summary>
-public sealed class FlowflakeGrpcClient(
+public sealed class FlowflakeIdGrpcClient(
     IOptions<FlowflakeIdGrpcClientOptions> options)
     : IFlowflakeId
 {

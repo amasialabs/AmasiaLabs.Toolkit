@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
     <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Grpc</PackageId>
-    <Version>1.4.1</Version>
+    <Version>1.4.2</Version>
     <Authors>Roman Stefanov</Authors>
     <Company>Amasia</Company>
     <Description>gRPC service wrapper around Flowflake ID generator (IFlowflakeId)</Description>
@@ -34,6 +34,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../AmasiaLabs.Toolkit.FlowflakeId.Abstractions/AmasiaLabs.Toolkit.FlowflakeId.Abstractions.csproj" />
+    <ProjectReference Include="..\AmasiaLabs.Toolkit.FlowflakeId.Extensions\AmasiaLabs.Toolkit.FlowflakeId.Extensions.csproj" />
   </ItemGroup>
 
 </Project>

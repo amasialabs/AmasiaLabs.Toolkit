@@ -10,12 +10,11 @@
     <ProjectReference Include="../../src/AmasiaLabs.Toolkit.FlowflakeId.Grpc/AmasiaLabs.Toolkit.FlowflakeId.Grpc.csproj" />
     <ProjectReference Include="../../src/AmasiaLabs.Toolkit.FlowflakeId/AmasiaLabs.Toolkit.FlowflakeId.csproj" />
     <ProjectReference Include="../../src/AmasiaLabs.Toolkit.FlowflakeId.Extensions/AmasiaLabs.Toolkit.FlowflakeId.Extensions.csproj" />
-    <ProjectReference Include="../../src/AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client/AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client.csproj">
-      <Aliases>GrpcClient</Aliases>
-    </ProjectReference>
+    <ProjectReference Include="..\..\src\AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client\AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Grpc.Core.Api" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
