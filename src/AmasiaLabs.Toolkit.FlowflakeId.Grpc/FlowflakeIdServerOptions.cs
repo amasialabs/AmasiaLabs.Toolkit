@@ -7,7 +7,7 @@ namespace AmasiaLabs.Toolkit.FlowflakeId.Grpc;
 /// </summary>
 public sealed class FlowflakeIdServerOptions
 {
-    public const string DefaultSectionPath = "Amasia:Toolkit:FlowflakeId:Grpc";
+    public const string DefaultSectionPath = "Amasia:Toolkit:FlowflakeId:Grpc:Server";
     public const int DefaultMaxBatchSize = 10_000;
 
     /// <summary>

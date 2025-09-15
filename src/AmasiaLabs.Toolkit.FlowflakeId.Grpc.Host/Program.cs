@@ -9,7 +9,7 @@ builder.Services.AddFlowflakeId(builder.Configuration);
 // gRPC
 builder.Services.AddGrpc();
 builder.Services.AddGrpcHealthChecks();
-// Optional: bind server options (e.g., MaxBatchSize) from configuration
+// Optional: bind server options (e.g., MaxBatchSize) from the configuration
 builder.Services.AddOptionsWithValidateOnStart<FlowflakeIdServerOptions>()
     .Bind(builder.Configuration.GetSection(FlowflakeIdServerOptions.DefaultSectionPath))
     .ValidateDataAnnotations();

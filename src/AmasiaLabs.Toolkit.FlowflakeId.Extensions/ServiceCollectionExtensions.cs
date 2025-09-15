@@ -2,11 +2,36 @@ using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace AmasiaLabs.Toolkit.FlowflakeId.Extensions;
 
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers Flowflake clock configuration without ID generation capabilities.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">The configuration root.</param>
+    /// <param name="sectionPath">The configuration section path. Defaults to "Amasia:Toolkit:FlowflakeId:FlowflakeClock".</param>
+    public static IServiceCollection AddFlowflakeClock(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string? sectionPath = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var path = sectionPath ?? $"{FlowflakeIdOptions.DefaultSectionPath}:FlowflakeClock";
+
+        services
+            .AddOptionsWithValidateOnStart<FlowflakeClockOptions>()
+            .Bind(configuration.GetSection(path))
+            .ValidateDataAnnotations();
+
+        return services;
+    }
+
     /// <summary>
     /// Registers Flowflake ID services and binds options from a configuration section.
     /// </summary>
@@ -23,7 +48,7 @@ public static class ServiceCollectionExtensions
             .AddOptionsWithValidateOnStart<FlowflakeIdOptions>()
             .Bind(section)
             .ValidateDataAnnotations()
-            .Validate(static o => o.Epoch > DateTime.MinValue, "FlowflakeId: Epoch must be set")
+            .Validate(static o => o.FlowflakeClock.Epoch > DateTime.MinValue, "FlowflakeId: FlowflakeClock.Epoch must be set")
             .Validate(static o => o.FailoverInstanceId is null || o.FailoverInstanceId.Value != o.InstanceId,
                 "FlowflakeId: FailoverInstanceId must differ from InstanceId");
 
@@ -32,7 +57,7 @@ public static class ServiceCollectionExtensions
             optionsBuilder.Configure(configure);
         }
 
-        services.TryAddSingleton<TimeProvider>(_ => TimeProvider.System);
+        services.TryAddSingleton<TimeProvider>(TimeProvider.System);
         services.AddSingleton<IFlowflakeId, FlowflakeId>();
         return services;
     }
@@ -67,11 +92,11 @@ public static class ServiceCollectionExtensions
             .AddOptionsWithValidateOnStart<FlowflakeIdOptions>()
             .Configure(configure)
             .ValidateDataAnnotations()
-            .Validate(static o => o.Epoch > DateTime.MinValue, "FlowflakeId: Epoch must be set")
+            .Validate(static o => o.FlowflakeClock.Epoch > DateTime.MinValue, "FlowflakeId: FlowflakeClock.Epoch must be set")
             .Validate(static o => o.FailoverInstanceId is null || o.FailoverInstanceId.Value != o.InstanceId,
                 "FlowflakeId: FailoverInstanceId must differ from InstanceId");
 
-        services.TryAddSingleton<TimeProvider>(_ => TimeProvider.System);
+        services.TryAddSingleton<TimeProvider>(TimeProvider.System);
         services.AddSingleton<IFlowflakeId, FlowflakeId>();
         return services;
     }

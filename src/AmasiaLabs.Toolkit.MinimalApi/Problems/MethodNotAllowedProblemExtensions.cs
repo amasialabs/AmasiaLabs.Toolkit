@@ -10,6 +10,7 @@ public static class MethodNotAllowedProblemExtensions
     public static IApplicationBuilder UseProblemMethodNotAllowed(this IApplicationBuilder app)
         => app.UseProblemMethodNotAllowed(configure: null);
 
+    // ReSharper disable once MemberCanBePrivate.Global
     public static IApplicationBuilder UseProblemMethodNotAllowed(this IApplicationBuilder app, Action<ProblemDetails>? configure)
     {
         return app.Use(async (ctx, next) =>

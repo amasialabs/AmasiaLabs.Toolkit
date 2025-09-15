@@ -77,7 +77,7 @@ public static class JwtBearerExtensions
     /// <summary>
     /// Adds a JWT bearer handler to the builder with defaults, reading configuration values.
     /// Uses configuration keys under "Amasia:Toolkit:Jwt" (Issuer, Audience, Key).
-    /// Falls back to legacy "Jwt" section when the default path is missing.
+    /// Falls back to a legacy "Jwt" section when the default path is missing.
     /// Also configures cookie token extraction and ProblemDetails for 401/403.
     /// </summary>
     /// <param name="builder">Authentication builder.</param>
@@ -217,9 +217,9 @@ public static class JwtBearerExtensions
         var key = jwtSection["Key"];
 
         if (string.IsNullOrWhiteSpace(issuer))
-            throw new InvalidOperationException("JWT configuration is missing Issuer (Amasia:Toolkit:MinimalApi:Jwt:Issuer or Jwt:Issuer).");
+            throw new InvalidOperationException("JWT configuration is missing Issuer (Amasia:Toolkit:MinimalApi:Jwt:Issuer).");
         if (string.IsNullOrWhiteSpace(audience))
-            throw new InvalidOperationException("JWT configuration is missing Audience (Amasia:Toolkit:MinimalApi:Jwt:Audience or Jwt:Audience).");
+            throw new InvalidOperationException("JWT configuration is missing Audience (Amasia:Toolkit:MinimalApi:Jwt:Audience).");
         if (string.IsNullOrWhiteSpace(key))
             throw new InvalidOperationException("JWT signing key is missing (Amasia:Toolkit:MinimalApi:Jwt:Key).");
 

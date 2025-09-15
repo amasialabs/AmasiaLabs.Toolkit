@@ -60,6 +60,7 @@ public static class EndpointExtensions
         return endpoints.UseEndpoints(ResolveDefaultAssembly());
     }
 
+    // ReSharper disable once MemberCanBePrivate.Global
     public static IEndpointRouteBuilder UseEndpoints(this IEndpointRouteBuilder endpoints, Assembly assembly)
     {
         foreach (var t in GetEndpointTypes(assembly))

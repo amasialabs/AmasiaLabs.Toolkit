@@ -32,7 +32,8 @@ public class FlowflakeGrpcTests
         {
             ["Amasia:Toolkit:FlowflakeId:InstanceId"] = "5",
             ["Amasia:Toolkit:FlowflakeId:UseUtcNow"] = "true",
-            ["Amasia:Toolkit:FlowflakeId:Epoch"] = epoch.ToString("O")
+            ["Amasia:Toolkit:FlowflakeId:FlowflakeClock:Epoch"] = epoch.ToString("O"),
+            ["Amasia:Toolkit:FlowflakeId:FlowflakeClock:TimeSemantics"] = "UtcNormalized"
         };
         builder.Configuration.AddInMemoryCollection(dict);
 

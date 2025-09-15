@@ -14,12 +14,12 @@ public sealed class ApiKeyAuthenticationOptions : AuthenticationSchemeOptions
     public ApiKeyLocation Location { get; set; } = ApiKeyLocation.HeaderOrQuery;
 
     /// <summary>
-    /// Header name for API key. Default: "X-Api-Key".
+    /// Header name for an API key. Default: "X-Api-Key".
     /// </summary>
     public string HeaderName { get; set; } = "X-Api-Key";
 
     /// <summary>
-    /// Query parameter name for API key. Default: "api_key".
+    /// Query parameter name for an API key. Default: "api_key".
     /// </summary>
     public string QueryParameterName { get; set; } = "api_key";
 

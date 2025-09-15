@@ -1,4 +1,5 @@
 using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
+using AmasiaLabs.Toolkit.FlowflakeId.Extensions;
 using AmasiaLabs.Toolkit.FlowflakeId.Extensions.Codecs;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
@@ -22,10 +23,13 @@ public class FlowflakeIdLegacyCompatTests
         var epoch = new DateTime(2023, 02, 15); // Unspecified kind
         var opts = new FlowflakeIdOptions
         {
+            FlowflakeClock = new FlowflakeClockOptions
+            {
+                Epoch = epoch,
+                TimeSemantics = FlowflakeTimeSemantics.LegacyUnspecifiedEpoch
+            },
             InstanceId = 1,
-            UseUtcNow = false,
-            Epoch = epoch,
-            TimeSemantics = FlowflakeTimeSemantics.LegacyUnspecifiedEpoch
+            UseUtcNow = false
         };
 
         var gen = new FlowflakeId(Options.Create(opts));
@@ -48,7 +52,7 @@ public class FlowflakeIdLegacyCompatTests
 
         // Verify that bits decode back to the same second and instance
         var layout = FlowflakeLayout.Default;
-        var dtBack = gen.GetDateTime(id);
+        var dtBack = id.GetDateTimeFromFlowflakeId(opts.ToFlowflakeClock());
         dtBack.Should().Be(dt);
         var instance = (int)((id >> (int)layout.InstanceShift) & (long)layout.InstanceMask);
         instance.Should().Be(1);

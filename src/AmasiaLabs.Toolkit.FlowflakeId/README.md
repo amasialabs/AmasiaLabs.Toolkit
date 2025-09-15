@@ -21,8 +21,10 @@ appsettings.json:
       "FlowflakeId": {
         "InstanceId": 1,
         "UseUtcNow": true,
-        "Epoch": "2023-02-15T00:00:00Z",
-        "TimeSemantics": "UtcNormalized"
+        "FlowflakeClock": {
+          "Epoch": "2023-02-15T00:00:00Z",
+          "TimeSemantics": "UtcNormalized"
+        }
       }
     }
   }
@@ -58,7 +60,11 @@ builder.Services.AddFlowflakeId(o =>
 {
     o.InstanceId = 1;
     o.UseUtcNow = true;
-    o.Epoch = new DateTime(2023, 02, 15);
+    o.FlowflakeClock = new FlowflakeClockOptions
+    {
+        Epoch = new DateTime(2023, 02, 15),
+        TimeSemantics = FlowflakeTimeSemantics.UtcNormalized
+    };
 });
 
 var app = builder.Build();
@@ -76,10 +82,32 @@ public interface IFlowflakeId
     ValueTask<long> GenerateForDateAsync(DateTime date, CancellationToken cancellationToken = default);
     ValueTask<long[]> GenerateBatchAsync(int size, CancellationToken cancellationToken = default);
     ValueTask<long[]> GenerateBatchForDateAsync(DateTime date, int size, CancellationToken cancellationToken = default);
-    int GetInstanceId();
-    int GetInstanceIdFromGlobalId(long id);
-    DateTime GetDateTime(long id);
+
+    int InstanceId { get; }  // Property to get the configured instance ID
 }
+```
+
+### Extracting Information from IDs
+
+```csharp
+// Using extension methods from AmasiaLabs.Toolkit.FlowflakeId.Extensions
+using AmasiaLabs.Toolkit.FlowflakeId.Extensions;
+using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
+
+var id = await generator.GenerateAsync();
+
+// Extract components
+int instanceId = id.GetInstanceIdFromFlowflakeId();
+int sequenceNumber = id.GetSequenceNumberFromFlowflakeId();
+long timestamp = id.GetTimestampFromFlowflakeId(); // seconds since epoch
+
+// Extract DateTime using configured clock
+var options = app.Services.GetRequiredService<IOptions<FlowflakeIdOptions>>();
+DateTime dateTime = id.GetDateTimeFromFlowflakeId(options.Value.ToFlowflakeClock());
+
+// Or if you have FlowflakeClockOptions directly (for decode-only scenarios)
+var clockOptions = app.Services.GetRequiredService<IOptions<FlowflakeClockOptions>>();
+DateTime dateTime = id.GetDateTimeFromFlowflakeId(clockOptions.Value.ToFlowflakeClock());
 ```
 
 ### Testing time-dependent behavior
@@ -89,12 +117,50 @@ Inject a custom `TimeProvider` (e.g., `FakeTimeProvider` from `Microsoft.Extensi
 ```csharp
 var epoch = new DateTime(2023, 02, 15, 0, 0, 0, DateTimeKind.Utc);
 var fake = new FakeTimeProvider(new DateTimeOffset(epoch).AddSeconds(10));
-var options = Options.Create(new FlowflakeIdOptions { InstanceId = 1, UseUtcNow = true, Epoch = epoch });
+var options = Options.Create(new FlowflakeIdOptions
+{
+    InstanceId = 1,
+    UseUtcNow = true,
+    FlowflakeClock = new FlowflakeClockOptions
+    {
+        Epoch = epoch,
+        TimeSemantics = FlowflakeTimeSemantics.UtcNormalized
+    }
+});
 var gen = new FlowflakeId(options, fake);
 
 var id1 = await gen.GenerateAsync();
 fake.Advance(TimeSpan.FromSeconds(1));
 var id2 = await gen.GenerateAsync();
+```
+
+## Decode-Only Scenarios
+
+For services that only need to decode DateTime from existing IDs without generating new ones:
+
+```csharp
+// Configure only the clock (no InstanceId required)
+builder.Services.AddFlowflakeClock(builder.Configuration);
+
+// Usage
+var clockOptions = app.Services.GetRequiredService<IOptions<FlowflakeClockOptions>>();
+DateTime dateTime = id.GetDateTimeFromFlowflakeId(clockOptions.Value.ToFlowflakeClock());
+```
+
+Configuration for decode-only:
+```json
+{
+  "Amasia": {
+    "Toolkit": {
+      "FlowflakeId": {
+        "FlowflakeClock": {
+          "Epoch": "2023-02-15T00:00:00Z",
+          "TimeSemantics": "UtcNormalized"
+        }
+      }
+    }
+  }
+}
 ```
 
 ## Time Semantics

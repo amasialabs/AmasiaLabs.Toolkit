@@ -32,7 +32,7 @@ public static class HmacResponseSigningExtensions
             {
                 await next();
 
-                // Only sign if status condition matches
+                // Only sign if the status condition matches
                 if (defaultOptions.SuccessOnly && ctx.Response.StatusCode is < 200 or >= 300)
                     return;
 
@@ -62,7 +62,7 @@ public static class HmacResponseSigningExtensions
             }
             finally
             {
-                // Copy buffer to original stream
+                // Copy buffer to the original stream
                 buffer.Position = 0;
                 await buffer.CopyToAsync(originalBody);
                 ctx.Response.Body = originalBody;

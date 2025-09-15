@@ -7,7 +7,7 @@ namespace AmasiaLabs.Toolkit.MinimalApi.Auth.Jwt.UsernamePasswordAuth;
 /// Maps a domain user to a set of claims for JWT issuance.
 /// </summary>
 /// <typeparam name="TUser">Domain user type.</typeparam>
-public interface IClaimsMapper<TUser>
+public interface IClaimsMapper<in TUser>
 {
     IEnumerable<Claim> Map(HttpContext context, TUser user);
 }

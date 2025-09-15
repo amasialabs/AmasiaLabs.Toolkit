@@ -5,12 +5,12 @@ namespace AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client;
 /// <summary>
 /// Options for Flowflake gRPC client SDK.
 /// </summary>
-public sealed class FlowflakeIdRpcOptions
+public sealed class FlowflakeIdGrpcClientOptions
 {
     /// <summary>
     /// Default configuration section path.
     /// </summary>
-    public const string DefaultSectionPath = "Amasia:Toolkit:FlowflakeId:Rpc";
+    public const string DefaultSectionPath = "Amasia:Toolkit:FlowflakeId:Grpc:Client";
 
     /// <summary>
     /// List of server addresses (e.g., http://host:port or https://host:port).

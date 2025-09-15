@@ -61,7 +61,7 @@ public sealed class ApiKeyAuthenticationHandler(
                 return AuthenticateResult.Fail("Invalid API key");
 
             var claims = Options.ClaimsFactory?.Invoke(subject)
-                         ?? new[] { new Claim(ClaimTypes.NameIdentifier, subject) };
+                         ?? [new Claim(ClaimTypes.NameIdentifier, subject)];
 
             var identity = new ClaimsIdentity(claims, Scheme.Name);
             var principal = new ClaimsPrincipal(identity);

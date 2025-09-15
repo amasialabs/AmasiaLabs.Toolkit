@@ -13,7 +13,7 @@ public static class HmacAuthenticationExtensions
     /// </summary>
     /// <param name="services">Service collection.</param>
     /// <param name="schemeName">Scheme name to register (default: "Hmac").</param>
-    /// <param name="setAsDefault">Whether to set this scheme as default authenticate/challenge scheme.</param>
+    /// <param name="setAsDefault">Whether to set this scheme as a default authenticate/challenge scheme.</param>
     /// <param name="configure">Optional additional configuration for <see cref="AuthenticationSchemeOptions"/>.</param>
     /// <returns>The authentication builder.</returns>
     public static AuthenticationBuilder AddHmacAuthentication(

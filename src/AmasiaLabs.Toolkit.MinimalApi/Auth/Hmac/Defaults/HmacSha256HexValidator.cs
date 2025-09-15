@@ -9,17 +9,9 @@ namespace AmasiaLabs.Toolkit.MinimalApi.Auth.Hmac.Defaults;
 /// <see cref="IHmacSignatureSigner"/>. Uses constant-time comparison and supports
 /// bypass via <see cref="SignatureOptions.CheckSignature"/>.
 /// </summary>
-public sealed class HmacSha256HexValidator : IHmacSignatureValidator
+public sealed class HmacSha256HexValidator(IHmacSignatureSigner signer, IOptions<SignatureOptions> options)
+    : IHmacSignatureValidator
 {
-    private readonly IHmacSignatureSigner signer;
-    private readonly IOptions<SignatureOptions> options;
-
-    public HmacSha256HexValidator(IHmacSignatureSigner signer, IOptions<SignatureOptions> options)
-    {
-        this.signer = signer;
-        this.options = options;
-    }
-
     public bool ValidateSignature(string key, string signature, string payload)
     {
         if (!options.Value.CheckSignature)

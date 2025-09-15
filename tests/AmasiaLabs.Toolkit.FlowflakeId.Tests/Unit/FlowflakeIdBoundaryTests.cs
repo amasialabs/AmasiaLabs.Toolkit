@@ -1,5 +1,6 @@
 using System.Reflection;
 using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
+using AmasiaLabs.Toolkit.FlowflakeId.Extensions;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
@@ -20,7 +21,12 @@ public class FlowflakeIdBoundaryTests
         var secondOffset = 100;
         var dt = epoch.AddSeconds(secondOffset);
         var time = new FakeTimeProvider(new DateTimeOffset(epoch));
-        var opts = new FlowflakeIdOptions { InstanceId = 42, UseUtcNow = true, Epoch = epoch };
+        var opts = new FlowflakeIdOptions
+        {
+            FlowflakeClock = new FlowflakeClockOptions { Epoch = epoch, TimeSemantics = FlowflakeTimeSemantics.UtcNormalized },
+            InstanceId = 42,
+            UseUtcNow = true
+        };
         var gen = Create(opts, time);
 
         // Prime last-seen second
@@ -51,8 +57,8 @@ public class FlowflakeIdBoundaryTests
         seq1.Should().Be(seqMax);
         seq2.Should().Be(layout.SequenceMin + 1);
         // Date should remain the same second
-        var dt1 = gen.GetDateTime(id1);
-        var dt2 = gen.GetDateTime(id2);
+        var dt1 = id1.GetDateTimeFromFlowflakeId(opts.ToFlowflakeClock());
+        var dt2 = id2.GetDateTimeFromFlowflakeId(opts.ToFlowflakeClock());
         dt1.Should().Be(dt);
         dt2.Should().Be(dt);
     }
@@ -65,7 +71,12 @@ public class FlowflakeIdBoundaryTests
         var secondOffset = 7;
         var dt = epoch.AddSeconds(secondOffset);
         var time = new FakeTimeProvider(new DateTimeOffset(epoch));
-        var opts = new FlowflakeIdOptions { InstanceId = 123, UseUtcNow = true, Epoch = epoch };
+        var opts = new FlowflakeIdOptions
+        {
+            FlowflakeClock = new FlowflakeClockOptions { Epoch = epoch, TimeSemantics = FlowflakeTimeSemantics.UtcNormalized },
+            InstanceId = 123,
+            UseUtcNow = true
+        };
         var gen = Create(opts, time);
 
         // Prime second
@@ -88,7 +99,7 @@ public class FlowflakeIdBoundaryTests
         instance.Should().Be(opts.InstanceId);
         seq.Should().Be(legacyMax);
         // Date must be preserved at the exact second
-        var dtActual = gen.GetDateTime(id);
+        var dtActual = id.GetDateTimeFromFlowflakeId(opts.ToFlowflakeClock());
         dtActual.Should().Be(dt);
     }
 
@@ -100,7 +111,12 @@ public class FlowflakeIdBoundaryTests
         var secondOffset = 8;
         var dt = epoch.AddSeconds(secondOffset);
         var time = new FakeTimeProvider(new DateTimeOffset(epoch));
-        var opts = new FlowflakeIdOptions { InstanceId = 321, UseUtcNow = true, Epoch = epoch };
+        var opts = new FlowflakeIdOptions
+        {
+            FlowflakeClock = new FlowflakeClockOptions { Epoch = epoch, TimeSemantics = FlowflakeTimeSemantics.UtcNormalized },
+            InstanceId = 321,
+            UseUtcNow = true
+        };
         var gen = Create(opts, time);
 
         // Prime second
@@ -123,7 +139,7 @@ public class FlowflakeIdBoundaryTests
         instance.Should().Be(opts.InstanceId);
         seq.Should().Be(newBoundary);
         // Date must be preserved at the exact second
-        var dtActual = gen.GetDateTime(id);
+        var dtActual = id.GetDateTimeFromFlowflakeId(opts.ToFlowflakeClock());
         dtActual.Should().Be(dt);
     }
 
@@ -135,7 +151,12 @@ public class FlowflakeIdBoundaryTests
         var secondOffset = 9;
         var dt = epoch.AddSeconds(secondOffset);
         var time = new FakeTimeProvider(new DateTimeOffset(epoch));
-        var opts = new FlowflakeIdOptions { InstanceId = 77, UseUtcNow = true, Epoch = epoch };
+        var opts = new FlowflakeIdOptions
+        {
+            FlowflakeClock = new FlowflakeClockOptions { Epoch = epoch, TimeSemantics = FlowflakeTimeSemantics.UtcNormalized },
+            InstanceId = 77,
+            UseUtcNow = true
+        };
         var gen = Create(opts, time);
 
         // Prime second
@@ -168,8 +189,8 @@ public class FlowflakeIdBoundaryTests
         instance2.Should().Be(opts.InstanceId);
 
         // Date must be preserved at the exact second
-        var dt1 = gen.GetDateTime(id1);
-        var dt2 = gen.GetDateTime(id2);
+        var dt1 = id1.GetDateTimeFromFlowflakeId(opts.ToFlowflakeClock());
+        var dt2 = id2.GetDateTimeFromFlowflakeId(opts.ToFlowflakeClock());
         dt1.Should().Be(dt);
         dt2.Should().Be(dt);
     }

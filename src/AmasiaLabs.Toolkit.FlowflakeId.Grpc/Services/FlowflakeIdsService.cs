@@ -11,7 +11,7 @@ public sealed class FlowflakeIdsService(
     IOptions<FlowflakeIdServerOptions>? serverOptions = null) : FlowflakeIds.FlowflakeIdsBase
 {
     private readonly FlowflakeIdOptions _opts = options.Value;
-    private readonly int _maxBatch = (serverOptions?.Value?.MaxBatchSize).GetValueOrDefault(FlowflakeIdServerOptions.DefaultMaxBatchSize);
+    private readonly int _maxBatch = (serverOptions?.Value.MaxBatchSize).GetValueOrDefault(FlowflakeIdServerOptions.DefaultMaxBatchSize);
 
     public override async Task<IdResponse> GetId(Empty request, ServerCallContext context)
     {
@@ -50,11 +50,11 @@ public sealed class FlowflakeIdsService(
 
     public override Task<ServerInfo> GetServerInfo(Empty request, ServerCallContext context)
     {
-        var epoch = _opts.Epoch.Kind switch
+        var epoch = _opts.FlowflakeClock.Epoch.Kind switch
         {
-            DateTimeKind.Utc => _opts.Epoch,
-            DateTimeKind.Local => _opts.Epoch.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(_opts.Epoch, DateTimeKind.Utc)
+            DateTimeKind.Utc => _opts.FlowflakeClock.Epoch,
+            DateTimeKind.Local => _opts.FlowflakeClock.Epoch.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(_opts.FlowflakeClock.Epoch, DateTimeKind.Utc)
         };
         var layout = FlowflakeLayout.Default;
         var info = new ServerInfo

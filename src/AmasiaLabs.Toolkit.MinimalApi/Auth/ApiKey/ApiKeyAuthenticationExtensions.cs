@@ -36,7 +36,7 @@ public static class ApiKeyAuthenticationExtensions
     }
 
     /// <summary>
-    /// Adds API Key scheme to an existing AuthenticationBuilder.
+    /// Adds an API Key scheme to an existing AuthenticationBuilder.
     /// </summary>
     public static AuthenticationBuilder AddApiKey(this AuthenticationBuilder builder, string schemeName = ApiKeyAuthenticationHandler.SchemeName, Action<ApiKeyAuthenticationOptions>? configure = null)
         => builder.AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(schemeName, configure ?? (_ => { }));

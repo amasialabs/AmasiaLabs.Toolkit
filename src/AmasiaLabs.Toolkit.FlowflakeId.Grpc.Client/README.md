@@ -10,17 +10,19 @@ dotnet add package AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client
 
 ## Configuration
 
-Default section path: `Amasia:Toolkit:FlowflakeId:Rpc`.
+Default section path: `Amasia:Toolkit:FlowflakeId:Grpc:Client`.
 
 ```json
 {
   "Amasia": {
     "Toolkit": {
       "FlowflakeId": {
-        "Rpc": {
-          "Addresses": [ "http://localhost:8080" ],
-          "DeadlineMs": 200,
-          "MaxAttempts": 2
+        "Grpc": {
+          "Client": {
+            "Addresses": [ "http://localhost:8080" ],
+            "DeadlineMs": 200,
+            "MaxAttempts": 2
+          }
         }
       }
     }

@@ -10,6 +10,7 @@ public static class BadRequestProblemExtensions
     public static IApplicationBuilder UseProblemBadRequest(this IApplicationBuilder app)
         => app.UseProblemBadRequest(configure: null);
 
+    // ReSharper disable once MemberCanBePrivate.Global
     public static IApplicationBuilder UseProblemBadRequest(this IApplicationBuilder app, Action<ProblemDetails>? configure)
     {
         return app.Use(async (ctx, next) =>

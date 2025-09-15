@@ -14,10 +14,10 @@ public sealed partial class FlowflakeId(
     private static readonly int SequenceMin = FlowflakeLayout.Default.SequenceMin;
     private static readonly int SequenceMax = FlowflakeLayout.Default.SequenceMax;
 
-    private readonly DateTime _epochUtc = EnsureUtc(options.Value.Epoch);
+    private readonly DateTime _epochUtc = EnsureUtc(options.Value.FlowflakeClock.Epoch);
     private readonly bool _useUtc = options.Value.UseUtcNow;
-    private readonly FlowflakeTimeSemantics _semantics = options.Value.TimeSemantics;
-    private readonly DateTime _epochRaw = options.Value.Epoch;
+    private readonly FlowflakeTimeSemantics _semantics = options.Value.FlowflakeClock.TimeSemantics;
+    private readonly DateTime _epochRaw = options.Value.FlowflakeClock.Epoch;
     private readonly int _instanceId = options.Value.InstanceId;
     private readonly int? _failoverInstanceId = options.Value.FailoverInstanceId;
 
@@ -84,7 +84,8 @@ public sealed partial class FlowflakeId(
     // ReSharper disable once MemberCanBePrivate.Global
     public long[] GenerateBatchForDate(DateTime date, int size)
     {
-        if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size));
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
+        
         var result = new long[size];
         for (var i = 0; i < size; i++)
         {
@@ -93,15 +94,8 @@ public sealed partial class FlowflakeId(
         return result;
     }
 
-    public int GetInstanceId() => _instanceId;
+    public int InstanceId => _instanceId;
 
-    public DateTime GetDateTime(long id)
-        => _semantics == FlowflakeTimeSemantics.LegacyUnspecifiedEpoch
-            ? DateTime.SpecifyKind(_epochRaw, DateTimeKind.Unspecified).Add(TimeSpan.FromSeconds(id >> 31))
-            : _epochUtc.Add(TimeSpan.FromSeconds(id >> 31));
-
-    public int GetInstanceIdFromFlowflakeId(long id) => (int)((id >> 22) & 0x1FF);
-    
     private void UpdateLastSeconds(long seconds)
     {
         var spinner = new SpinWait();

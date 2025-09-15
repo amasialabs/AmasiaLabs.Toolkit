@@ -32,7 +32,7 @@ public sealed class HmacResponseSigningOptions
 
     /// <summary>
     /// Builds a payload string from HTTP context and response body text.
-    /// When null, uses the raw response body text.
+    /// When null, use the raw response body text.
     /// </summary>
     // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public Func<HttpContext, string, Task<string>>? BuildPayload { get; set; }

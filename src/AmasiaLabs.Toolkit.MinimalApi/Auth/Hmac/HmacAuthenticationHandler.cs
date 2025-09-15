@@ -84,7 +84,7 @@ public sealed class HmacAuthenticationHandler(
         }
 
         var claims = Options.ClaimsFactory?.Invoke(clientId)
-                     ?? new[] { new Claim(ClaimTypes.NameIdentifier, clientId), new Claim("client_id", clientId) };
+                     ?? [new Claim(ClaimTypes.NameIdentifier, clientId), new Claim("client_id", clientId)];
 
         var identity = new ClaimsIdentity(claims, Scheme.Name);
         var principal = new ClaimsPrincipal(identity);

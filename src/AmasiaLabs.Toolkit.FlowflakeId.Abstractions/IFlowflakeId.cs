@@ -30,20 +30,9 @@ public interface IFlowflakeId
     /// <param name="size">Number of IDs to generate. Must be > 0.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     ValueTask<long[]> GenerateBatchForDateAsync(DateTime date, int size, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Gets the instance ID of this generator.
     /// </summary>
-    int GetInstanceId();
-
-    /// <summary>
-    /// Extracts the instance ID from a generated ID.
-    /// </summary>
-    /// <param name="id">The generated ID.</param>
-    int GetInstanceIdFromFlowflakeId(long id);
-
-    /// <summary>
-    /// Extracts the timestamp from a generated ID.
-    /// </summary>
-    /// <param name="id">The generated ID.</param>
-    DateTime GetDateTime(long id);
+    int InstanceId { get; }
 }

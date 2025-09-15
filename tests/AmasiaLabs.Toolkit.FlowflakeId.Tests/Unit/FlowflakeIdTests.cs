@@ -1,4 +1,5 @@
 using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
+using AmasiaLabs.Toolkit.FlowflakeId.Extensions;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
@@ -18,18 +19,23 @@ public class FlowflakeIdTests
         var epoch = new DateTime(2023, 02, 15, 0, 0, 0, DateTimeKind.Utc);
         var start = new DateTimeOffset(epoch).AddSeconds(123);
         var time = new FakeTimeProvider(start);
-        var opts = new FlowflakeIdOptions { InstanceId = 42, UseUtcNow = true, Epoch = epoch };
+        var opts = new FlowflakeIdOptions
+        {
+            FlowflakeClock = new FlowflakeClockOptions { Epoch = epoch, TimeSemantics = FlowflakeTimeSemantics.UtcNormalized },
+            InstanceId = 42,
+            UseUtcNow = true
+        };
         var gen = Create(opts, time);
 
         // Act
         var id = await gen.GenerateAsync(TestContext.Current.CancellationToken);
-        var dt = gen.GetDateTime(id);
-        var instance = gen.GetInstanceIdFromFlowflakeId(id);
+        var dt = id.GetDateTimeFromFlowflakeId(opts.ToFlowflakeClock());
+        var instance = id.GetInstanceIdFromFlowflakeId();
 
         // Assert
         dt.Should().Be(epoch.AddSeconds(123));
         instance.Should().Be(42);
-        gen.GetInstanceId().Should().Be(42);
+        gen.InstanceId.Should().Be(42);
     }
 
     [Fact]
@@ -39,7 +45,12 @@ public class FlowflakeIdTests
         var epoch = new DateTime(2023, 02, 15, 0, 0, 0, DateTimeKind.Utc);
         var start = new DateTimeOffset(epoch).AddSeconds(10);
         var time = new FakeTimeProvider(start);
-        var opts = new FlowflakeIdOptions { InstanceId = 1, UseUtcNow = true, Epoch = epoch };
+        var opts = new FlowflakeIdOptions
+        {
+            FlowflakeClock = new FlowflakeClockOptions { Epoch = epoch, TimeSemantics = FlowflakeTimeSemantics.UtcNormalized },
+            InstanceId = 1,
+            UseUtcNow = true
+        };
         var gen = Create(opts, time);
 
         // Act
@@ -60,7 +71,13 @@ public class FlowflakeIdTests
         var epoch = new DateTime(2023, 02, 15, 0, 0, 0, DateTimeKind.Utc);
         var start = new DateTimeOffset(epoch).AddSeconds(1000);
         var time = new FakeTimeProvider(start);
-        var opts = new FlowflakeIdOptions { InstanceId = 10, FailoverInstanceId = 11, UseUtcNow = true, Epoch = epoch };
+        var opts = new FlowflakeIdOptions
+        {
+            FlowflakeClock = new FlowflakeClockOptions { Epoch = epoch, TimeSemantics = FlowflakeTimeSemantics.UtcNormalized },
+            InstanceId = 10,
+            FailoverInstanceId = 11,
+            UseUtcNow = true
+        };
         var gen = Create(opts, time);
         var earlier = epoch.AddSeconds(998);
 
@@ -69,9 +86,9 @@ public class FlowflakeIdTests
         var id2 = await gen.GenerateForDateAsync(earlier, TestContext.Current.CancellationToken); // should use instance=11
         
         var id3 = await gen.GenerateAsync(TestContext.Current.CancellationToken);
-        var inst1 = gen.GetInstanceIdFromFlowflakeId(id1);
-        var inst2 = gen.GetInstanceIdFromFlowflakeId(id2);
-        var inst3 = gen.GetInstanceIdFromFlowflakeId(id3);
+        var inst1 = id1.GetInstanceIdFromFlowflakeId();
+        var inst2 = id2.GetInstanceIdFromFlowflakeId();
+        var inst3 = id3.GetInstanceIdFromFlowflakeId();
 
         // Assert
         inst1.Should().Be(10);

@@ -10,6 +10,7 @@ public static class ConflictProblemExtensions
     public static IApplicationBuilder UseProblemConflict(this IApplicationBuilder app)
         => app.UseProblemConflict(configure: null);
 
+    // ReSharper disable once MemberCanBePrivate.Global
     public static IApplicationBuilder UseProblemConflict(this IApplicationBuilder app, Action<ProblemDetails>? configure)
     {
         return app.Use(async (ctx, next) =>

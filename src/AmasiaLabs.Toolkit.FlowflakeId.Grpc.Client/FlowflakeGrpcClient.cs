@@ -13,10 +13,10 @@ namespace AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client;
 /// and decodes timestamps/instance locally.
 /// </summary>
 public sealed class FlowflakeGrpcClient(
-    IOptions<FlowflakeIdRpcOptions> options)
+    IOptions<FlowflakeIdGrpcClientOptions> options)
     : IFlowflakeId
 {
-    private readonly FlowflakeIdRpcOptions _opts = options.Value;
+    private readonly FlowflakeIdGrpcClientOptions _opts = options.Value;
 
     private readonly ConcurrentDictionary<string, FlowflakeIds.FlowflakeIdsClient> _clients = new();
     private int _addrIndex;
@@ -57,15 +57,8 @@ public sealed class FlowflakeGrpcClient(
         return arr;
     }
 
-    public int GetInstanceId()
+    public int InstanceId
         => EnsureServerInfoInitialized().InstanceId;
-
-    public int GetInstanceIdFromFlowflakeId(long id)
-    {
-        var layout = EnsureServerInfoLayout();
-        var instance = (id >> (int)layout.InstanceShift) & (long)layout.InstanceMask;
-        return (int)instance;
-    }
 
     public DateTime GetDateTime(long id)
     {

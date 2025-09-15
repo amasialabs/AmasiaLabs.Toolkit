@@ -1,7 +1,6 @@
 using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client;
 
@@ -14,12 +13,12 @@ public static class FlowflakeGrpcClientServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration,
         string? sectionPath = null,
-        Action<FlowflakeIdRpcOptions>? configure = null)
+        Action<FlowflakeIdGrpcClientOptions>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        var path = sectionPath ?? FlowflakeIdRpcOptions.DefaultSectionPath;
+        var path = sectionPath ?? FlowflakeIdGrpcClientOptions.DefaultSectionPath;
         var section = configuration.GetSection(path);
         return services.AddFlowflakeIdGrpcClient(section, configure);
     }
@@ -31,13 +30,13 @@ public static class FlowflakeGrpcClientServiceCollectionExtensions
     public static IServiceCollection AddFlowflakeIdGrpcClient(
         this IServiceCollection services,
         IConfigurationSection section,
-        Action<FlowflakeIdRpcOptions>? configure = null)
+        Action<FlowflakeIdGrpcClientOptions>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(section);
 
         var optionsBuilder = services
-            .AddOptionsWithValidateOnStart<FlowflakeIdRpcOptions>()
+            .AddOptionsWithValidateOnStart<FlowflakeIdGrpcClientOptions>()
             .Bind(section)
             .ValidateDataAnnotations();
 

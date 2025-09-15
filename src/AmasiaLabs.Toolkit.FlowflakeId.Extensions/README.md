@@ -7,12 +7,13 @@ Dependency injection and formatting extensions for the Flowflake ID generator.
 This package provides:
 - DI integration via `ServiceCollectionExtensions`
 - Formatting helpers via `FlowflakeIdFormattingExtensions`
+- Parsing helpers via `FlowflakeIdParsingExtensions`
 - Built-in codec implementations:
   - **Base36** - Alphanumeric encoding (0-9, a-z)
   - **Base58** - Bitcoin-style encoding (excludes ambiguous characters)
   - **Base62** - Alphanumeric encoding (0-9, a-z, A-Z)
   - **Base64Url** - URL-safe Base64 encoding
-  - **Bech32** - Bitcoin Bech32 encoding with checksum
+  - **Bech32** - Bech32/Bech32m encoding with built-in checksum (requires configuration)
   - **CrockfordBase32** - Douglas Crockford's Base32 encoding
   - **Hex** - Hexadecimal encoding
 
@@ -97,6 +98,24 @@ Bech32 encodes IDs in format: `{hrp}1{data}{checksum}`
 - Can accept longer output (~13 data chars for 62 bits + 6 checksum + hrp + '1')
 
 **Note:** Bech32 codec is not available via enum in `FlowflakeIdCodecProvider` due to required constructor parameters.
+
+### Parsing Extensions
+
+Extract information from Flowflake IDs without needing the generator instance:
+
+```csharp
+using AmasiaLabs.Toolkit.FlowflakeId.Extensions;
+
+long id = 123456789L;
+
+// Extract components from the ID
+int instanceId = id.GetInstanceIdFromFlowflakeId();      // Extract instance ID (bits 22-30)
+int sequence = id.GetSequenceNumberFromFlowflakeId();     // Extract sequence (bits 0-21)
+long timestamp = id.GetTimestampFromFlowflakeId();        // Extract timestamp (seconds since epoch)
+
+// Note: To get DateTime, use the generator's GetDateTime(id) method
+// as it requires knowledge of the epoch and time semantics
+```
 
 ## Dependencies
 

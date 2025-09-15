@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace AmasiaLabs.Toolkit.MinimalApi.Auth.Jwt.UsernamePasswordAuth;
 
 /// <summary>
-/// Registration helpers for username/password authentication pipeline built from app-provided adapters.
+/// Registration helpers for a username/password authentication pipeline built from app-provided adapters.
 /// </summary>
 public static class UsernamePasswordAuthServiceCollectionExtensions
 {
