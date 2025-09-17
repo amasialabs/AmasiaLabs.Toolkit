@@ -23,23 +23,18 @@ public static class ConflictProblemExtensions
             if (ctx.Response.StatusCode != StatusCodes.Status409Conflict)
                 return;
 
-            var opts = ctx.RequestServices.GetRequiredService<ProblemHandlingOptions>();
             var status = StatusCodes.Status409Conflict;
-
-            var pd = new ProblemDetails
-            {
-                Status = status,
-                Title = "Conflict",
-                Detail = opts.GetMessage(status),
-                Instance = ctx.Request.Path,
-                Type = opts.TypeUriFactory(status),
-                Extensions = { ["traceId"] = ctx.TraceIdentifier }
-            };
+            var pd = new ProblemDetails { Status = status, Title = "Conflict" };
 
             configure?.Invoke(pd);
 
-            ctx.Response.ContentType = "application/problem+json";
-            await ctx.Response.WriteAsJsonAsync(pd);
+            var pds = ctx.RequestServices.GetRequiredService<IProblemDetailsService>();
+            var context = new ProblemDetailsContext
+            {
+                HttpContext = ctx,
+                ProblemDetails = pd
+            };
+            await pds.WriteAsync(context);
         });
     }
 }

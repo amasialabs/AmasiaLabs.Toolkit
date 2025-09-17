@@ -87,7 +87,7 @@ public class ApiKeyIntegrationTests
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
-        builder.Services.AddSingleton(new ProblemHandlingOptions());
+        builder.Services.AddGlobalExceptionHandling();
 
         builder.Services.AddSingleton<IApiKeyProvider, TestApiKeyProvider>();
         builder.Services.AddApiKeyAuthentication(setAsDefault: true, configure: configureAuth);

@@ -21,7 +21,7 @@ public class JwtIntegrationTests
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
-        builder.Services.AddSingleton(new ProblemHandlingOptions());
+        builder.Services.AddGlobalExceptionHandling();
 
         builder.Services
             .AddAuthentication()

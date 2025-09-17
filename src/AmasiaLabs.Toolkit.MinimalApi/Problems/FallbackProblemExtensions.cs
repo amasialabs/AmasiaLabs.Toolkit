@@ -14,27 +14,20 @@ public static class FallbackProblemExtensions
     {
         return app.MapFallback(async ctx =>
         {
-            var opts = ctx.RequestServices.GetRequiredService<ProblemHandlingOptions>();
             var status = StatusCodes.Status404NotFound;
-
-            var pd = new ProblemDetails
-            {
-                Status = status,
-                Title = "Not found",
-                Detail = opts.GetMessage(status),
-                Instance = ctx.Request.Path,
-                Type = opts.TypeUriFactory(status),
-                Extensions =
-                {
-                    ["traceId"] = ctx.TraceIdentifier
-                }
-            };
+            var pd = new ProblemDetails { Status = status, Title = "Not found" };
 
             configure?.Invoke(pd);
 
             ctx.Response.StatusCode = status;
-            ctx.Response.ContentType = "application/problem+json";
-            await ctx.Response.WriteAsJsonAsync(pd);
+
+            var pds = ctx.RequestServices.GetRequiredService<IProblemDetailsService>();
+            var context = new ProblemDetailsContext
+            {
+                HttpContext = ctx,
+                ProblemDetails = pd
+            };
+            await pds.WriteAsync(context);
         });
     }
 }

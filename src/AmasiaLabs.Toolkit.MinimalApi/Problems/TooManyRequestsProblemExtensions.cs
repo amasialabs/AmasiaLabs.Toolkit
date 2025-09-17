@@ -23,26 +23,18 @@ public static class TooManyRequestsProblemExtensions
             if (ctx.Response.StatusCode != StatusCodes.Status429TooManyRequests)
                 return;
 
-            var opts = ctx.RequestServices.GetRequiredService<ProblemHandlingOptions>();
             var status = StatusCodes.Status429TooManyRequests;
-
-            var pd = new ProblemDetails
-            {
-                Status = status,
-                Title = "Too many requests",
-                Detail = opts.GetMessage(status),
-                Instance = ctx.Request.Path,
-                Type = opts.TypeUriFactory(status),
-                Extensions =
-                {
-                    ["traceId"] = ctx.TraceIdentifier
-                }
-            };
+            var pd = new ProblemDetails { Status = status, Title = "Too many requests" };
 
             configure?.Invoke(pd);
 
-            ctx.Response.ContentType = "application/problem+json";
-            await ctx.Response.WriteAsJsonAsync(pd);
+            var pds = ctx.RequestServices.GetRequiredService<IProblemDetailsService>();
+            var context = new ProblemDetailsContext
+            {
+                HttpContext = ctx,
+                ProblemDetails = pd
+            };
+            await pds.WriteAsync(context);
         });
     }
 }

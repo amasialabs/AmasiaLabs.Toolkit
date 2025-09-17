@@ -23,23 +23,18 @@ public static class BadRequestProblemExtensions
             if (ctx.Response.StatusCode != StatusCodes.Status400BadRequest)
                 return;
 
-            var opts = ctx.RequestServices.GetRequiredService<ProblemHandlingOptions>();
             var status = StatusCodes.Status400BadRequest;
-
-            var pd = new ProblemDetails
-            {
-                Status = status,
-                Title = "Bad request",
-                Detail = opts.GetMessage(status),
-                Instance = ctx.Request.Path,
-                Type = opts.TypeUriFactory(status),
-                Extensions = { ["traceId"] = ctx.TraceIdentifier }
-            };
+            var pd = new ProblemDetails { Status = status, Title = "Bad request" };
 
             configure?.Invoke(pd);
 
-            ctx.Response.ContentType = "application/problem+json";
-            await ctx.Response.WriteAsJsonAsync(pd);
+            var pds = ctx.RequestServices.GetRequiredService<IProblemDetailsService>();
+            var context = new ProblemDetailsContext
+            {
+                HttpContext = ctx,
+                ProblemDetails = pd
+            };
+            await pds.WriteAsync(context);
         });
     }
 }

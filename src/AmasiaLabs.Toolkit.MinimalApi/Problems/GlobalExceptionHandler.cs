@@ -5,7 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace AmasiaLabs.Toolkit.MinimalApi.Problems;
 
-public sealed class GlobalExceptionHandler(ProblemHandlingOptions options, ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
+public sealed class GlobalExceptionHandler(
+    ProblemHandlingOptions options,
+    IProblemDetailsService problemDetailsService,
+    ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext ctx, Exception ex, CancellationToken token)
     {
@@ -22,18 +25,19 @@ public sealed class GlobalExceptionHandler(ProblemHandlingOptions options, ILogg
         {
             Status = mapped.Status,
             Title = mapped.Title,
-            Detail = mapped.Detail ?? (options.IncludeExceptionDetails ? ex.Message : options.GetMessage(mapped.Status)),
-            Instance = ctx.Request.Path,
-            Type = options.TypeUriFactory(mapped.Status),
-            Extensions =
-            {
-                ["traceId"] = ctx.TraceIdentifier
-            }
+            Detail = mapped.Detail
+        };
+
+        // Delegate serialization and content negotiation to the built-in ProblemDetails service
+        var pdContext = new ProblemDetailsContext
+        {
+            HttpContext = ctx,
+            ProblemDetails = problem,
+            Exception = ex
         };
 
         ctx.Response.StatusCode = mapped.Status;
-        ctx.Response.ContentType = "application/problem+json";
-        await ctx.Response.WriteAsJsonAsync(problem, cancellationToken: token);
+        await problemDetailsService.WriteAsync(pdContext);
         return true;
     }
 }

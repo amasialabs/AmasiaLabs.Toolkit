@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AmasiaLabs.Toolkit.MinimalApi.Problems;
 
@@ -25,25 +26,54 @@ public static class ProblemResultExtensions
 
     private static IResult CreateProblem(HttpContext ctx, int status, string title, string? detail, IDictionary<string, object?>? extensions)
     {
-        var opts = ctx.RequestServices.GetRequiredService<ProblemHandlingOptions>();
-        var ext = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["traceId"] = ctx.TraceIdentifier
-        };
+        return new ServiceProblemResult(
+            status: status,
+            title: title,
+            detail: detail,
+            extensions: extensions
+        );
+    }
 
-        if (extensions is not null)
+    private sealed class ServiceProblemResult : IResult
+    {
+        private readonly int status;
+        private readonly string title;
+        private readonly string? detail;
+        private readonly IDictionary<string, object?>? extensions;
+
+        public ServiceProblemResult(int status, string title, string? detail, IDictionary<string, object?>? extensions)
         {
-            foreach (var kv in extensions)
-                ext[kv.Key] = kv.Value;
+            this.status = status;
+            this.title = title;
+            this.detail = detail;
+            this.extensions = extensions;
         }
 
-        return Results.Problem(
-            detail: detail ?? opts.GetMessage(status),
-            instance: ctx.Request.Path,
-            statusCode: status,
-            title: title,
-            type: opts.TypeUriFactory(status),
-            extensions: ext
-        );
+        public async Task ExecuteAsync(HttpContext httpContext)
+        {
+            var problem = new ProblemDetails
+            {
+                Status = status,
+                Title = title,
+                Detail = detail
+            };
+
+            if (extensions is not null)
+            {
+                foreach (var kv in extensions)
+                {
+                    problem.Extensions[kv.Key] = kv.Value;
+                }
+            }
+
+            httpContext.Response.StatusCode = status;
+            var pds = httpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
+            var context = new ProblemDetailsContext
+            {
+                HttpContext = httpContext,
+                ProblemDetails = problem
+            };
+            await pds.WriteAsync(context);
+        }
     }
 }

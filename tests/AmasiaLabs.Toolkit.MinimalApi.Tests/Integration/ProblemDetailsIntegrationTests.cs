@@ -20,8 +20,7 @@ public class ProblemDetailsIntegrationTests
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
-        // Provide ProblemHandlingOptions needed by fallback/problem middlewares
-        builder.Services.AddSingleton(new ProblemHandlingOptions());
+        builder.Services.AddGlobalExceptionHandling();
 
         var app = builder.Build();
         // Do not enable exception handler in this test host
@@ -49,7 +48,7 @@ public class ProblemDetailsIntegrationTests
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
-        builder.Services.AddSingleton(new ProblemHandlingOptions());
+        builder.Services.AddGlobalExceptionHandling();
 
         var app = builder.Build();
         // Do not enable exception handler in this test host

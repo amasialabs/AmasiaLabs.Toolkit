@@ -16,7 +16,7 @@ public class ProblemResultExtensionsTests
         // Arrange
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddSingleton(new ProblemHandlingOptions());
+        services.AddGlobalExceptionHandling();
         var sp = services.BuildServiceProvider();
 
         var ctx = new DefaultHttpContext
@@ -42,7 +42,7 @@ public class ProblemResultExtensionsTests
 
         // Assert
         ctx.Response.StatusCode.Should().Be(StatusCodes.Status422UnprocessableEntity);
-        ctx.Response.ContentType.Should().Be("application/problem+json");
+        ctx.Response.ContentType.Should().StartWith("application/problem+json");
         root.GetProperty("status").GetInt32().Should().Be(422);
         root.GetProperty("title").GetString().Should().Be("Unprocessable content");
         root.TryGetProperty("detail", out var detailProp).Should().BeTrue();

@@ -23,23 +23,18 @@ public static class UnprocessableContentProblemExtensions
             if (ctx.Response.StatusCode != StatusCodes.Status422UnprocessableEntity)
                 return;
 
-            var opts = ctx.RequestServices.GetRequiredService<ProblemHandlingOptions>();
             var status = StatusCodes.Status422UnprocessableEntity;
-
-            var pd = new ProblemDetails
-            {
-                Status = status,
-                Title = "Unprocessable content",
-                Detail = opts.GetMessage(status),
-                Instance = ctx.Request.Path,
-                Type = opts.TypeUriFactory(status),
-                Extensions = { ["traceId"] = ctx.TraceIdentifier }
-            };
+            var pd = new ProblemDetails { Status = status, Title = "Unprocessable content" };
 
             configure?.Invoke(pd);
 
-            ctx.Response.ContentType = "application/problem+json";
-            await ctx.Response.WriteAsJsonAsync(pd);
+            var pds = ctx.RequestServices.GetRequiredService<IProblemDetailsService>();
+            var context = new ProblemDetailsContext
+            {
+                HttpContext = ctx,
+                ProblemDetails = pd
+            };
+            await pds.WriteAsync(context);
         });
     }
 }

@@ -60,12 +60,24 @@ var app = builder.Build();
 app.UseGlobalExceptionHandling();
 ```
 
+### Error Handling Model
+
+- Global exceptions: `GlobalExceptionHandler` handles thrown exceptions and maps them via `ProblemHandlingOptions` into RFC 7807 using `IProblemDetailsService`.
+- Status codes without exceptions: middlewares convert bare HTTP statuses to ProblemDetails so responses stay consistent:
+  - 404 fallback: `app.MapProblemFallback404()`
+  - 405 method not allowed: `app.UseProblemMethodNotAllowed()`
+  - 400/409/422 defaults: `app.UseProblemBadRequest()`, `app.UseProblemConflict()`, `app.UseProblemUnprocessableContent()`
+  - 429 throttling: `app.UseProblemTooManyRequests()` (and see rate limiter sample below)
+- Centralized formatting: `AddGlobalExceptionHandling` registers `AddProblemDetails` with defaults (type/instance/traceId and default messages). Any `ProblemDetails` written through `IProblemDetailsService` gets these applied automatically.
+
 Annotate routes for OpenAPI:
 
 ```csharp
 app.MapGet("/users", () => Results.Ok())
    .ProducesDefaultProblems();
 ```
+
+Note: `AddGlobalExceptionHandling` registers ASP.NET Core's `IProblemDetailsService`. If you use problem middlewares or the 404 fallback without it, register `builder.Services.AddProblemDetails()` yourself.
 
 Fallback + 405:
 
@@ -86,6 +98,7 @@ builder.Services.AddRateLimiter(options =>
     {
         var httpContext = context.HttpContext;
         var opts = httpContext.RequestServices.GetRequiredService<ProblemHandlingOptions>();
+        var pds = httpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
         var status = StatusCodes.Status429TooManyRequests;
         var pd = new ProblemDetails
         {
@@ -97,8 +110,12 @@ builder.Services.AddRateLimiter(options =>
         };
 
         httpContext.Response.StatusCode = status;
-        httpContext.Response.ContentType = "application/problem+json";
-        return httpContext.Response.WriteAsJsonAsync(pd, cancellationToken: token);
+        var ctx = new ProblemDetailsContext
+        {
+            HttpContext = httpContext,
+            ProblemDetails = pd
+        };
+        return pds.WriteAsync(ctx);
     };
 });
 ```

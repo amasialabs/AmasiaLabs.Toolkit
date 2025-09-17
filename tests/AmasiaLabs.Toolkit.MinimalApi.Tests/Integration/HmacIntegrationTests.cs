@@ -66,8 +66,7 @@ public class HmacIntegrationTests
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
-        // Provide ProblemHandlingOptions for HMAC challenge/forbid ProblemDetails
-        builder.Services.AddSingleton(new ProblemHandlingOptions());
+        builder.Services.AddGlobalExceptionHandling();
         // Avoid global exception handler to keep the test host minimal
 
         // Test HMAC dependencies

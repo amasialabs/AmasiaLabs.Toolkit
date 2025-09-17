@@ -23,7 +23,7 @@ public class StatusProblemMiddlewareTests
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
-        builder.Services.AddSingleton(new ProblemHandlingOptions());
+        builder.Services.AddGlobalExceptionHandling();
 
         var app = builder.Build();
         // Register problem middlewares
@@ -53,7 +53,7 @@ public class StatusProblemMiddlewareTests
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
-        builder.Services.AddSingleton(new ProblemHandlingOptions());
+        builder.Services.AddGlobalExceptionHandling();
 
         var app = builder.Build();
         app.UseProblemTooManyRequests();

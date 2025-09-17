@@ -98,39 +98,31 @@ public sealed class HmacAuthenticationHandler(
         Response.StatusCode = StatusCodes.Status401Unauthorized;
         Response.Headers.Append("WWW-Authenticate", Options.WwwAuthenticateScheme);
 
-        var opts = Context.RequestServices.GetRequiredService<ProblemHandlingOptions>();
         var status = StatusCodes.Status401Unauthorized;
-        var pd = new ProblemDetails
-        {
-            Status = status,
-            Title = "Unauthorized",
-            Detail = opts.GetMessage(status),
-            Instance = Context.Request.Path,
-            Type = opts.TypeUriFactory(status),
-            Extensions = { ["traceId"] = Context.TraceIdentifier }
-        };
+        var pd = new ProblemDetails { Status = status, Title = "Unauthorized" };
 
-        Response.ContentType = "application/problem+json";
-        return Response.WriteAsJsonAsync(pd);
+        var pds = Context.RequestServices.GetRequiredService<IProblemDetailsService>();
+        var context = new ProblemDetailsContext
+        {
+            HttpContext = Context,
+            ProblemDetails = pd
+        };
+        return pds.WriteAsync(context).AsTask();
     }
 
     protected override Task HandleForbiddenAsync(AuthenticationProperties properties)
     {
         Response.StatusCode = StatusCodes.Status403Forbidden;
 
-        var opts = Context.RequestServices.GetRequiredService<ProblemHandlingOptions>();
         var status = StatusCodes.Status403Forbidden;
-        var pd = new ProblemDetails
-        {
-            Status = status,
-            Title = "Forbidden",
-            Detail = opts.GetMessage(status),
-            Instance = Context.Request.Path,
-            Type = opts.TypeUriFactory(status),
-            Extensions = { ["traceId"] = Context.TraceIdentifier }
-        };
+        var pd = new ProblemDetails { Status = status, Title = "Forbidden" };
 
-        Response.ContentType = "application/problem+json";
-        return Response.WriteAsJsonAsync(pd);
+        var pds = Context.RequestServices.GetRequiredService<IProblemDetailsService>();
+        var context = new ProblemDetailsContext
+        {
+            HttpContext = Context,
+            ProblemDetails = pd
+        };
+        return pds.WriteAsync(context).AsTask();
     }
 }

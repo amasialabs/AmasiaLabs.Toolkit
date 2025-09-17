@@ -164,43 +164,29 @@ public static class JwtBearerExtensions
                 OnChallenge = ctx =>
                 {
                     ctx.HandleResponse();
-                    var opts = ctx.HttpContext.RequestServices.GetRequiredService<ProblemHandlingOptions>();
                     var status = StatusCodes.Status401Unauthorized;
-                    var pd = new ProblemDetails
-                    {
-                        Status = status,
-                        Title = "Unauthorized",
-                        Detail = opts.GetMessage(status),
-                        Instance = ctx.HttpContext.Request.Path,
-                        Type = opts.TypeUriFactory(status),
-                        Extensions =
-                        {
-                            ["traceId"] = ctx.HttpContext.TraceIdentifier
-                        }
-                    };
+                    var pd = new ProblemDetails { Status = status, Title = "Unauthorized" };
                     ctx.Response.StatusCode = status;
-                    ctx.Response.ContentType = "application/problem+json";
-                    return ctx.Response.WriteAsJsonAsync(pd);
+                    var pds = ctx.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
+                    var context = new ProblemDetailsContext
+                    {
+                        HttpContext = ctx.HttpContext,
+                        ProblemDetails = pd
+                    };
+                    return pds.WriteAsync(context).AsTask();
                 },
                 OnForbidden = ctx =>
                 {
-                    var opts = ctx.HttpContext.RequestServices.GetRequiredService<ProblemHandlingOptions>();
                     var status = StatusCodes.Status403Forbidden;
-                    var pd = new ProblemDetails
-                    {
-                        Status = status,
-                        Title = "Forbidden",
-                        Detail = opts.GetMessage(status),
-                        Instance = ctx.HttpContext.Request.Path,
-                        Type = opts.TypeUriFactory(status),
-                        Extensions =
-                        {
-                            ["traceId"] = ctx.HttpContext.TraceIdentifier
-                        }
-                    };
+                    var pd = new ProblemDetails { Status = status, Title = "Forbidden" };
                     ctx.Response.StatusCode = status;
-                    ctx.Response.ContentType = "application/problem+json";
-                    return ctx.Response.WriteAsJsonAsync(pd);
+                    var pds = ctx.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
+                    var context = new ProblemDetailsContext
+                    {
+                        HttpContext = ctx.HttpContext,
+                        ProblemDetails = pd
+                    };
+                    return pds.WriteAsync(context).AsTask();
                 }
             };
 
