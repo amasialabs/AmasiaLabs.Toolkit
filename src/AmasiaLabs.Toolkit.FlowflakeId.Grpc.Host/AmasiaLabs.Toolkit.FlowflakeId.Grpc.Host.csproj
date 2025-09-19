@@ -1,13 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>default</LangVersion>
     <InvariantGlobalization>true</InvariantGlobalization>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host</PackageId>
-    <Version>1.4.2</Version>
+    <Version>1.4.3</Version>
   </PropertyGroup>
 
   <ItemGroup>

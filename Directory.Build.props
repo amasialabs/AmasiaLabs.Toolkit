@@ -1,0 +1,21 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- Enable central package management -->
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    
+    <!-- Common properties for all projects -->
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>default</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Packaging defaults for packable projects (libraries) -->
+  <PropertyGroup Condition="'$(IsPackable)' != 'false'">
+    <Authors>Roman Stefanov</Authors>
+    <Company>Amasia</Company>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+</Project>

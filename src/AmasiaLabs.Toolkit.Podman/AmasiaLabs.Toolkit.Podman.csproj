@@ -1,16 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <LangVersion>default</LangVersion>
+        
         <PackageId>AmasiaLabs.Toolkit.Podman</PackageId>
-        <Version>1.0.4</Version>
-        <Authors>Roman Stefanov</Authors>
-        <Company>Amasia</Company>
+        <Version>1.0.5</Version>
         <Description>Toolkit for Podman integration in .NET applications</Description>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 

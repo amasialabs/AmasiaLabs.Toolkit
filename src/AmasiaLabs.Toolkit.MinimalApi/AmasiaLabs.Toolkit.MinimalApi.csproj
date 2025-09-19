@@ -1,16 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <LangVersion>default</LangVersion>
+        
         <PackageId>AmasiaLabs.Toolkit.MinimalApi</PackageId>
-        <Version>1.7.0</Version>
-        <Authors>Roman Stefanov</Authors>
-        <Company>Amasia</Company>
+        <Version>1.7.1</Version>
         <Description>Toolkit &amp; Boilerplate for Minimal API projects</Description>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
