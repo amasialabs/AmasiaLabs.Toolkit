@@ -34,7 +34,7 @@ jobs:
 
       - name: Publish new NuGet packages to GitHub Packages (tags from Auto Tag)
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_PAT }}
+          GITHUB_TOKEN: ${{ secrets.AMASIALABS_GHCR_PAT }}
           GH_OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail

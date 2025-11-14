@@ -3,7 +3,7 @@
   <PropertyGroup>
     
     <PackageId>AmasiaLabs.Toolkit.FlowflakeId</PackageId>
-    <Version>1.4.6</Version>
+    <Version>1.4.7</Version>
     <Description>Snowflake-like ID generator with configurable epoch/time source (Flowflake)</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
