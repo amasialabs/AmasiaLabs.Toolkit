@@ -3,7 +3,7 @@
   <PropertyGroup>
     
     <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client</PackageId>
-    <Version>1.4.8</Version>
+    <Version>1.4.9</Version>
     <Description>gRPC client SDK for Flowflake ID service with failover and ServerInfo caching</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
