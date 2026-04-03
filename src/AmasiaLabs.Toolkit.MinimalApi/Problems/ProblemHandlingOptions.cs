@@ -4,7 +4,7 @@ namespace AmasiaLabs.Toolkit.MinimalApi.Problems;
 
 public sealed class ProblemHandlingOptions
 {
-    public bool IncludeExceptionDetails { get; set; } = false;
+    public bool IncludeExceptionDetails { get; set; }
 
     /// <summary>
     /// When true, the global exception handler logs unhandled exceptions via ILogger.
@@ -31,7 +31,7 @@ public sealed class ProblemHandlingOptions
 
     public Func<int, string> TypeUriFactory { get; set; } = status => $"https://httpstatuses.io/{status}";
 
-    public (int Status, string Title, string? Detail) Resolve(Exception ex, HttpContext ctx) => ex switch
+    public static (int Status, string Title, string? Detail) Resolve(Exception ex, HttpContext ctx) => ex switch
     {
         ArgumentException or FormatException => (StatusCodes.Status400BadRequest, "Bad request", null),
         KeyNotFoundException => (StatusCodes.Status404NotFound, "Not found", null),

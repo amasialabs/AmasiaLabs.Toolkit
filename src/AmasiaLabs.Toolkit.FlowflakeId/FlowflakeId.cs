@@ -72,7 +72,7 @@ public sealed partial class FlowflakeId(
     // ReSharper disable once MemberCanBePrivate.Global
     public long[] GenerateBatch(int size)
     {
-        if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size));
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
         var result = new long[size];
         for (var i = 0; i < size; i++)
         {
@@ -133,12 +133,12 @@ public sealed partial class FlowflakeId
     public ValueTask<long> GenerateAsync(CancellationToken cancellationToken = default)
         => ValueTask.FromResult(Generate());
 
-    public ValueTask<long> GenerateForDateAsync(DateTime date, CancellationToken cancellationToken = default)
-        => ValueTask.FromResult(GenerateForDate(date));
+    public ValueTask<long> GenerateForDateAsync(DateTime targetDate, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(GenerateForDate(targetDate));
 
     public ValueTask<long[]> GenerateBatchAsync(int size, CancellationToken cancellationToken = default)
         => ValueTask.FromResult(GenerateBatch(size));
 
-    public ValueTask<long[]> GenerateBatchForDateAsync(DateTime date, int size, CancellationToken cancellationToken = default)
-        => ValueTask.FromResult(GenerateBatchForDate(date, size));
+    public ValueTask<long[]> GenerateBatchForDateAsync(DateTime targetDate, int size, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(GenerateBatchForDate(targetDate, size));
 }

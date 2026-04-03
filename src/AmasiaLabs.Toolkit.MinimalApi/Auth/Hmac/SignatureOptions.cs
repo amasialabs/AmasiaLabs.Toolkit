@@ -15,6 +15,6 @@ public sealed class SignatureOptions
     /// When true, the payload is normalized by removing CR, LF, and TAB before signing/validation.
     /// Default: false.
     /// </summary>
-    public bool Trim { get; set; } = false;
+    public bool Trim { get; set; }
 }
 

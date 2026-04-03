@@ -14,7 +14,7 @@ namespace AmasiaLabs.Toolkit.MinimalApi.Auth.ApiKey;
 /// <summary>
 /// API Key authentication handler with ProblemDetails for 401/403.
 /// </summary>
-public sealed class ApiKeyAuthenticationHandler(
+public sealed partial class ApiKeyAuthenticationHandler(
     IApiKeyProvider provider,
     IOptionsMonitor<ApiKeyAuthenticationOptions> options,
     ILoggerFactory logger,
@@ -69,7 +69,7 @@ public sealed class ApiKeyAuthenticationHandler(
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error validating API key");
+            LogApiKeyValidationError(Logger, ex);
             return AuthenticateResult.Fail("API key validation error");
         }
     }
@@ -106,4 +106,7 @@ public sealed class ApiKeyAuthenticationHandler(
         };
         return pds.WriteAsync(context).AsTask();
     }
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error validating API key")]
+    private static partial void LogApiKeyValidationError(ILogger logger, Exception exception);
 }

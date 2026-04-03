@@ -27,7 +27,7 @@ public class CrockfordBase32Codec(bool withChecksum = false) : IIdCodec
 
     public long Decode(string text)
     {
-        if (string.IsNullOrEmpty(text)) throw new ArgumentException(nameof(text));
+        ArgumentException.ThrowIfNullOrEmpty(text);
         var cleaned = text.Replace("-", "", StringComparison.Ordinal);
         int end = cleaned.Length;
         int payloadEnd = withChecksum ? end - 1 : end;

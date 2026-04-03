@@ -25,12 +25,10 @@ public static class ApiKeyAuthenticationExtensions
 
         builder.AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(schemeName, configure ?? (_ => { }));
 
-        services.AddAuthorization(options =>
-        {
-            options.AddPolicy("ApiKeyOnly", policy => policy
+        services.AddAuthorizationBuilder()
+            .AddPolicy("ApiKeyOnly", policy => policy
                 .AddAuthenticationSchemes(schemeName)
                 .RequireAuthenticatedUser());
-        });
 
         return builder;
     }

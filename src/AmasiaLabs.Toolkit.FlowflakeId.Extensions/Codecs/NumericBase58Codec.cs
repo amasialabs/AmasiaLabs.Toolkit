@@ -24,7 +24,7 @@ public class NumericBase58Codec : IIdCodec
 
     public long Decode(string text)
     {
-        if (string.IsNullOrEmpty(text)) throw new ArgumentException(nameof(text));
+        ArgumentException.ThrowIfNullOrEmpty(text);
         ulong acc = 0;
         foreach (char ch in text)
         {

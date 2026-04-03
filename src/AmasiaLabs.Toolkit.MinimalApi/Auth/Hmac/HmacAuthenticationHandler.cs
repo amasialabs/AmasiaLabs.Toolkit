@@ -19,7 +19,7 @@ namespace AmasiaLabs.Toolkit.MinimalApi.Auth.Hmac;
 /// - Validates signature via <see cref="IHmacSignatureValidator"/> using the full request body as payload.
 /// - Emits RFC 7807 ProblemDetails for 401/403 using <see cref="ProblemHandlingOptions"/>.
 /// </summary>
-public sealed class HmacAuthenticationHandler(
+public sealed partial class HmacAuthenticationHandler(
     IHmacSignatureValidator signatureValidator,
     IHmacKeyProvider keyProvider,
     IOptionsMonitor<HmacAuthenticationOptions> options,
@@ -79,7 +79,7 @@ public sealed class HmacAuthenticationHandler(
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error validating signature for client {ClientId}", clientId);
+            LogSignatureValidationError(Logger, ex, clientId);
             return AuthenticateResult.Fail("Signature validation error");
         }
 
@@ -125,4 +125,7 @@ public sealed class HmacAuthenticationHandler(
         };
         return pds.WriteAsync(context).AsTask();
     }
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error validating signature for client {ClientId}")]
+    private static partial void LogSignatureValidationError(ILogger logger, Exception exception, string clientId);
 }

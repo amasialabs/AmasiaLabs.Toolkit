@@ -33,12 +33,10 @@ public static class HmacAuthenticationExtensions
 
         builder.AddScheme<HmacAuthenticationOptions, HmacAuthenticationHandler>(schemeName, configure ?? (_ => { }));
 
-        services.AddAuthorization(options =>
-        {
-            options.AddPolicy(HmacAuthenticationHandler.PolicyName, policy => policy
+        services.AddAuthorizationBuilder()
+            .AddPolicy(HmacAuthenticationHandler.PolicyName, policy => policy
                 .AddAuthenticationSchemes(schemeName)
                 .RequireAuthenticatedUser());
-        });
 
         return builder;
     }

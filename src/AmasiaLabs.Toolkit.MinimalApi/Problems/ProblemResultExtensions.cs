@@ -24,7 +24,7 @@ public static class ProblemResultExtensions
     public static IResult TooManyRequests(this HttpContext ctx, string? detail = null, string? title = null, IDictionary<string, object?>? extensions = null)
         => CreateProblem(ctx, StatusCodes.Status429TooManyRequests, title ?? "Too many requests", detail, extensions);
 
-    private static IResult CreateProblem(HttpContext ctx, int status, string title, string? detail, IDictionary<string, object?>? extensions)
+    private static ServiceProblemResult CreateProblem(HttpContext ctx, int status, string title, string? detail, IDictionary<string, object?>? extensions)
     {
         return new ServiceProblemResult(
             status: status,

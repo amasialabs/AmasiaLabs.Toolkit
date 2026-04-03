@@ -13,9 +13,9 @@ public interface IFlowflakeId
     /// <summary>
     /// Generates a single ID for the specified timestamp.
     /// </summary>
-    /// <param name="date">Timestamp to use for ID generation.</param>
+    /// <param name="targetDate">Timestamp to use for ID generation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    ValueTask<long> GenerateForDateAsync(DateTime date, CancellationToken cancellationToken = default);
+    ValueTask<long> GenerateForDateAsync(DateTime targetDate, CancellationToken cancellationToken = default);
     /// <summary>
     /// Generates a batch of IDs using the default time source.
     /// </summary>
@@ -26,10 +26,10 @@ public interface IFlowflakeId
     /// <summary>
     /// Generates a batch of IDs for the specified timestamp.
     /// </summary>
-    /// <param name="date">Timestamp to use for ID generation.</param>
+    /// <param name="targetDate">Timestamp to use for ID generation.</param>
     /// <param name="size">Number of IDs to generate. Must be > 0.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    ValueTask<long[]> GenerateBatchForDateAsync(DateTime date, int size, CancellationToken cancellationToken = default);
+    ValueTask<long[]> GenerateBatchForDateAsync(DateTime targetDate, int size, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the instance ID of this generator.

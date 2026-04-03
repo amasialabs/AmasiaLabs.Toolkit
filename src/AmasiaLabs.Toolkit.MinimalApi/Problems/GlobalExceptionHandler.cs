@@ -5,21 +5,21 @@ using Microsoft.Extensions.Logging;
 
 namespace AmasiaLabs.Toolkit.MinimalApi.Problems;
 
-public sealed class GlobalExceptionHandler(
+public sealed partial class GlobalExceptionHandler(
     ProblemHandlingOptions options,
     IProblemDetailsService problemDetailsService,
     ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
-    public async ValueTask<bool> TryHandleAsync(HttpContext ctx, Exception ex, CancellationToken token)
+    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         if (options.LogExceptions)
         {
-            logger.LogError(ex, "Unhandled exception while processing {Method} {Path}", ctx.Request.Method, ctx.Request.Path);
+            LogUnhandledException(logger, exception, httpContext.Request.Method, httpContext.Request.Path);
         }
 
-        var mapped = 
-            options.ExceptionMaps.FirstOrDefault(kv => kv.Key.IsInstanceOfType(ex)).Value?.Invoke(ex, ctx)
-                     ?? options.Resolve(ex, ctx);
+        var mapped =
+            options.ExceptionMaps.FirstOrDefault(kv => kv.Key.IsInstanceOfType(exception)).Value?.Invoke(exception, httpContext)
+                     ?? ProblemHandlingOptions.Resolve(exception, httpContext);
 
         var problem = new ProblemDetails
         {
@@ -31,13 +31,16 @@ public sealed class GlobalExceptionHandler(
         // Delegate serialization and content negotiation to the built-in ProblemDetails service
         var pdContext = new ProblemDetailsContext
         {
-            HttpContext = ctx,
+            HttpContext = httpContext,
             ProblemDetails = problem,
-            Exception = ex
+            Exception = exception
         };
 
-        ctx.Response.StatusCode = mapped.Status;
+        httpContext.Response.StatusCode = mapped.Status;
         await problemDetailsService.WriteAsync(pdContext);
         return true;
     }
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Unhandled exception while processing {Method} {Path}")]
+    private static partial void LogUnhandledException(ILogger logger, Exception exception, string method, PathString path);
 }

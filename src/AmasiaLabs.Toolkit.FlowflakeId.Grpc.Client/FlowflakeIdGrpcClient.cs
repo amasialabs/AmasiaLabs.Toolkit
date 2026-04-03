@@ -31,28 +31,28 @@ public sealed class FlowflakeIdGrpcClient(
         return resp.Id;
     }
 
-    public async ValueTask<long> GenerateForDateAsync(DateTime date, CancellationToken cancellationToken = default)
+    public async ValueTask<long> GenerateForDateAsync(DateTime targetDate, CancellationToken cancellationToken = default)
     {
-        var ts = Timestamp.FromDateTime(DateTime.SpecifyKind(date, DateTimeKind.Utc));
+        var ts = Timestamp.FromDateTime(DateTime.SpecifyKind(targetDate, DateTimeKind.Utc));
         var resp = await CallAsync((c, co) => c.GetIdForDateAsync(new DateRequest { Timestamp = ts }, co), cancellationToken);
         return resp.Id;
     }
 
     public async ValueTask<long[]> GenerateBatchAsync(int size, CancellationToken cancellationToken = default)
     {
-        if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size));
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
         var resp = await CallAsync((c, co) => c.GetBatchAsync(new BatchRequest { Size = size }, co), cancellationToken);
         return resp.Ids.ToArray();
     }
 
-    public async ValueTask<long[]> GenerateBatchForDateAsync(DateTime date, int size, CancellationToken cancellationToken = default)
+    public async ValueTask<long[]> GenerateBatchForDateAsync(DateTime targetDate, int size, CancellationToken cancellationToken = default)
     {
-        if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size));
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
         // No dedicated RPC yet; fall back to repeated calls.
         var arr = new long[size];
         for (var i = 0; i < size; i++)
         {
-            arr[i] = await GenerateForDateAsync(date, cancellationToken);
+            arr[i] = await GenerateForDateAsync(targetDate, cancellationToken);
         }
         return arr;
     }

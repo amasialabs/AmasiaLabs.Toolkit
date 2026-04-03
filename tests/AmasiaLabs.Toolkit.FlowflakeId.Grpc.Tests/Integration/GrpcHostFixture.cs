@@ -32,7 +32,7 @@ public sealed class GrpcHostFixture : IAsyncLifetime
         new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Amasia:Toolkit:FlowflakeId:InstanceId"] = InstanceId.ToString(),
+                ["Amasia:Toolkit:FlowflakeId:InstanceId"] = InstanceId.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["Amasia:Toolkit:FlowflakeId:UseUtcNow"] = "true",
                 ["Amasia:Toolkit:FlowflakeId:FlowflakeClock:Epoch"] = EpochUtc.ToString("O"),
                 ["Amasia:Toolkit:FlowflakeId:FlowflakeClock:TimeSemantics"] = Semantics.ToString(),

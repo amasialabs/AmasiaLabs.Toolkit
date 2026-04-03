@@ -60,10 +60,8 @@ public class ApiKeyIntegrationTests
             ];
         }, configurePolicies: services =>
         {
-            services.AddAuthorization(o =>
-            {
-                o.AddPolicy("AdminOnly", p => p.RequireRole("admin").RequireAuthenticatedUser());
-            });
+            services.AddAuthorizationBuilder()
+                .AddPolicy("AdminOnly", p => p.RequireRole("admin").RequireAuthenticatedUser());
         });
 
         app.MapGet("/admin", () => Results.Ok()).RequireAuthorization("AdminOnly");

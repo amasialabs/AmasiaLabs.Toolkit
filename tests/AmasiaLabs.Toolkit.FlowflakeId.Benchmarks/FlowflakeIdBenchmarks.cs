@@ -132,6 +132,7 @@ public class FlowflakeIdBenchmarks : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        GC.SuppressFinalize(this);
         if (_server is not null)
         {
             await _server.StopAsync();
