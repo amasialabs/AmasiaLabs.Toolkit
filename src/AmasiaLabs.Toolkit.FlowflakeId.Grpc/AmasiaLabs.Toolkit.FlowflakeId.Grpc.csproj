@@ -3,7 +3,7 @@
   <PropertyGroup>
     
     <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Grpc</PackageId>
-    <Version>1.4.10</Version>
+    <Version>1.4.11</Version>
     <Description>gRPC service wrapper around Flowflake ID generator (IFlowflakeId)</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
