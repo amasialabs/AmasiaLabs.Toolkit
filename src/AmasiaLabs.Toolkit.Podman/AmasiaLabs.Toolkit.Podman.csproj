@@ -3,7 +3,7 @@
     <PropertyGroup>
         
         <PackageId>AmasiaLabs.Toolkit.Podman</PackageId>
-        <Version>1.0.13</Version>
+        <Version>1.0.14</Version>
         <Description>Toolkit for Podman integration in .NET applications</Description>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
