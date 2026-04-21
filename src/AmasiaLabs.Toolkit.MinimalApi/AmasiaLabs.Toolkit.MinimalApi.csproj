@@ -3,7 +3,7 @@
     <PropertyGroup>
         
         <PackageId>AmasiaLabs.Toolkit.MinimalApi</PackageId>
-        <Version>1.7.11</Version>
+        <Version>1.7.12</Version>
         <Description>Toolkit &amp; Boilerplate for Minimal API projects</Description>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
