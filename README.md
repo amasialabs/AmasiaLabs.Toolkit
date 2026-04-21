@@ -13,7 +13,7 @@
 
 ## Installation
 
-Packages are available via GitHub Packages:
+Packages are available via NuGet.org:
 
 ```bash
 dotnet add package AmasiaLabs.Toolkit.MinimalApi
@@ -42,4 +42,4 @@ dotnet pack --configuration Release --output ./artifacts
 
 ## CI/CD
 
-GitHub Actions builds and publishes NuGet packages to GitHub Packages on pushes to the main branch.
+GitHub Actions builds and publishes NuGet packages to NuGet.org after new package version tags are created. Publishing requires a repository secret named `NUGET_API_KEY` with a NuGet.org API key.

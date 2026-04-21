@@ -7,13 +7,20 @@ on:
     types: [completed]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   publish:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout release commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -32,21 +39,34 @@ jobs:
       - name: Pack all
         run: dotnet pack --configuration Release --no-build --output ./artifacts
 
-      - name: Publish new NuGet packages to GitHub Packages (tags from Auto Tag)
+      - name: Publish new NuGet packages to NuGet.org
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.AMASIALABS_GHCR_PAT }}
-          GH_OWNER: ${{ github.repository_owner }}
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           set -euo pipefail
 
-          # Use the head SHA from Auto Tag workflow and find tags pointing at it
-          SHA="${{ github.event.workflow_run.head_sha }}"
-          echo "Head SHA from Auto Tag: $SHA"
-          git fetch --tags --force
-          TAGS=$(git tag --points-at "$SHA" || true)
-          echo "Tags on HEAD:\n$TAGS"
+          if [[ -z "${NUGET_API_KEY:-}" ]]; then
+            echo "NUGET_API_KEY secret is not configured."
+            exit 1
+          fi
 
-          for pkg in ./artifacts/*.nupkg; do
+          # Use the release commit and find package tags pointing at it.
+          echo "Release SHA: $RELEASE_SHA"
+          git fetch --tags --force
+          TAGS=$(git tag --points-at "$RELEASE_SHA" || true)
+          echo "Tags on release SHA:"
+          echo "$TAGS"
+
+          shopt -s nullglob
+          packages=(./artifacts/*.nupkg)
+          if (( ${#packages[@]} == 0 )); then
+            echo "No NuGet packages found in ./artifacts."
+            exit 0
+          fi
+
+          for pkg in "${packages[@]}"; do
             # Extract Id and Version from the nuspec inside the nupkg
             spec_id=$(unzip -p "$pkg" "*.nuspec" | sed -n 's:.*<id>\(.*\)</id>.*:\1:p' | head -n1)
             spec_version=$(unzip -p "$pkg" "*.nuspec" | sed -n 's:.*<version>\(.*\)</version>.*:\1:p' | head -n1)
@@ -58,9 +78,9 @@ jobs:
 
             # Determine if a matching tag exists for this package/version
             MATCHED=false
-            if echo "$TAGS" | grep -qx "$spec_id/v$spec_version"; then
+            if echo "$TAGS" | grep -Fxq "$spec_id/v$spec_version"; then
               MATCHED=true
-            elif echo "$TAGS" | grep -qx "v$spec_version"; then
+            elif echo "$TAGS" | grep -Fxq "v$spec_version"; then
               MATCHED=true
             fi
 
@@ -69,20 +89,11 @@ jobs:
               continue
             fi
 
-            nameLower=$(echo "$spec_id" | tr '[:upper:]' '[:lower:]')
-            version="$spec_version"
-            echo "Checking $spec_id $version..."
-
-            result=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-              "https://nuget.pkg.github.com/${GH_OWNER}/v3/registration3-gz-semver2/${nameLower}/index.json" \
-              | jq -r '.items[].items[].catalogEntry.version' 2>/dev/null | grep -ix "$version" || true)
-
-            if [[ -z "$result" ]]; then
-              echo "Version $version is new, publishing $spec_id..."
-              dotnet nuget push "$pkg" --api-key "$GITHUB_TOKEN" --source "https://nuget.pkg.github.com/${GH_OWNER}/index.json" --skip-duplicate
-            else
-              echo "Version $version already exists for $spec_id, skipping."
-            fi
+            echo "Publishing $spec_id $spec_version to NuGet.org..."
+            dotnet nuget push "$pkg" \
+              --api-key "$NUGET_API_KEY" \
+              --source "https://api.nuget.org/v3/index.json" \
+              --skip-duplicate
           done
 
       - name: Show published artifacts
