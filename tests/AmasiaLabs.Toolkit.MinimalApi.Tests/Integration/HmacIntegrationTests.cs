@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
@@ -150,7 +151,7 @@ public class HmacIntegrationTests
         var body = "hello";
         var timestamp = DateTimeOffset.UtcNow;
         var nonce = "n-1";
-        var canonical = BuildCanonicalRequest("POST", "/secure-echo", "", timestamp, nonce, body);
+        var canonical = BuildCanonicalRequest("POST", "/secure-echo", "", timestamp.ToString("O", CultureInfo.InvariantCulture), nonce, body);
         var signature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, canonical);
 
         var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
@@ -212,7 +213,7 @@ public class HmacIntegrationTests
         var body = "hello";
         var staleTimestamp = DateTimeOffset.UtcNow.AddMinutes(-10);
         var nonce = "n-stale";
-        var canonical = BuildCanonicalRequest("POST", "/secure-echo", "", staleTimestamp, nonce, body);
+        var canonical = BuildCanonicalRequest("POST", "/secure-echo", "", staleTimestamp.ToString("O", CultureInfo.InvariantCulture), nonce, body);
         var signature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, canonical);
 
         var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
@@ -239,7 +240,7 @@ public class HmacIntegrationTests
         var body = "hello";
         var timestamp = DateTimeOffset.UtcNow;
         var nonce = "n-replay";
-        var canonical = BuildCanonicalRequest("POST", "/secure-echo", "", timestamp, nonce, body);
+        var canonical = BuildCanonicalRequest("POST", "/secure-echo", "", timestamp.ToString("O", CultureInfo.InvariantCulture), nonce, body);
         var signature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, canonical);
 
         HttpRequestMessage MakeReq()
@@ -284,8 +285,112 @@ public class HmacIntegrationTests
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task Canonical_Mode_Chunked_Body_Should_Be_Authenticated()
+    {
+        // Regression for the body-hash bug: when a request uses chunked transfer encoding,
+        // ContentLength is null on the server side. Old code treated null as "empty body"
+        // and signed SHA256(empty), which (a) rejects legitimate chunked clients that signed
+        // the real body hash, and (b) lets attackers slip arbitrary body bytes past auth as
+        // long as they sign with the empty-body hash. The fix is to always read the stream.
+        var (_, client) = await BuildHmacApp(configureHmac: o => o.PayloadMode = HmacPayloadMode.CanonicalRequest);
+
+        var body = "important payload that must be authenticated";
+        var bodyBytes = Encoding.UTF8.GetBytes(body);
+        var timestamp = DateTimeOffset.UtcNow;
+        var nonce = "n-chunked";
+        var canonical = BuildCanonicalRequest("POST", "/secure-echo", "", timestamp.ToString("O", CultureInfo.InvariantCulture), nonce, body);
+        var signature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, canonical);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
+        {
+            Content = new ChunkedTestContent(bodyBytes, "text/plain"),
+        };
+        req.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+        req.Headers.Add("X-Signature", signature);
+        req.Headers.Add("X-Timestamp", timestamp.ToString("O", CultureInfo.InvariantCulture));
+        req.Headers.Add("X-Nonce", nonce);
+
+        var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK, "chunked-body request signed against the real body hash must validate");
+    }
+
+    [Fact]
+    public async Task Canonical_Mode_Invalid_Signature_Should_Not_Consume_Nonce()
+    {
+        // Regression for the nonce-poisoning bug: a request with an invalid signature
+        // must not consume the (clientId, nonce) tuple in the nonce store. Otherwise
+        // an attacker (or a buggy client) can lock out the legitimate request.
+        var nonceStore = new InMemoryNonceStore();
+        var (_, client) = await BuildHmacApp(
+            configureHmac: o => o.PayloadMode = HmacPayloadMode.CanonicalRequest,
+            extraServices: s => s.AddSingleton<IHmacNonceStore>(nonceStore));
+
+        var body = "hello";
+        var timestamp = DateTimeOffset.UtcNow;
+        var nonce = "n-poisoning-attempt";
+
+        // First request: valid timestamp + nonce, INVALID signature
+        var bad = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "text/plain"),
+        };
+        bad.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+        bad.Headers.Add("X-Signature", "0badbadbadbadbad");
+        bad.Headers.Add("X-Timestamp", timestamp.ToString("O", CultureInfo.InvariantCulture));
+        bad.Headers.Add("X-Nonce", nonce);
+        var badResp = await client.SendAsync(bad, TestContext.Current.CancellationToken);
+        badResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        // Second request: SAME nonce, VALID signature — must succeed because the
+        // bogus first request must NOT have consumed the nonce.
+        var canonical = BuildCanonicalRequest("POST", "/secure-echo", "", timestamp.ToString("O", CultureInfo.InvariantCulture), nonce, body);
+        var goodSignature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, canonical);
+        var good = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "text/plain"),
+        };
+        good.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+        good.Headers.Add("X-Signature", goodSignature);
+        good.Headers.Add("X-Timestamp", timestamp.ToString("O", CultureInfo.InvariantCulture));
+        good.Headers.Add("X-Nonce", nonce);
+        var goodResp = await client.SendAsync(good, TestContext.Current.CancellationToken);
+        goodResp.StatusCode.Should().Be(HttpStatusCode.OK, "legitimate request must succeed; bogus first request must not have poisoned the nonce");
+    }
+
+    [Fact]
+    public async Task Canonical_Mode_Should_Sign_Raw_Timestamp_Header_Value()
+    {
+        // The canonical string signs exactly the timestamp string the client sent
+        // in the header — not a server-side normalized form. This lets clients use
+        // any DateTimeOffset-parseable representation (e.g. "2026-04-28T14:00:00Z")
+        // without having to mirror the server's format choice.
+        var (_, client) = await BuildHmacApp(configureHmac: o => o.PayloadMode = HmacPayloadMode.CanonicalRequest);
+
+        // Pick a format that DateTimeOffset.Parse accepts but DateTimeOffset.ToString("O") would NOT produce
+        // (no fractional seconds, "Z" suffix instead of "+00:00").
+        var rawTimestamp = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+        var body = "hello";
+        var nonce = "n-raw-ts";
+        var canonical = BuildCanonicalRequest("POST", "/secure-echo", "", rawTimestamp, nonce, body);
+        var signature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, canonical);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "text/plain"),
+        };
+        req.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+        req.Headers.Add("X-Signature", signature);
+        req.Headers.Add("X-Timestamp", rawTimestamp);
+        req.Headers.Add("X-Nonce", nonce);
+
+        var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
+        resp.StatusCode.Should().Be(HttpStatusCode.OK, "server must sign the raw timestamp header value, not a server-side reformatted version");
+    }
+
     private static string BuildCanonicalRequest(
-        string method, string path, string query, DateTimeOffset timestamp, string nonce, string body)
+        string method, string path, string query, string rawTimestamp, string nonce, string body)
     {
         var bodyBytes = Encoding.UTF8.GetBytes(body);
         var bodyHashHex = Convert.ToHexString(SHA256.HashData(bodyBytes)).ToLowerInvariant();
@@ -293,9 +398,31 @@ public class HmacIntegrationTests
             method.ToUpperInvariant(),
             path,
             query,
-            timestamp.ToString("O", CultureInfo.InvariantCulture),
+            rawTimestamp,
             nonce,
             bodyHashHex);
+    }
+
+    private sealed class ChunkedTestContent : HttpContent
+    {
+        private readonly byte[] data;
+
+        public ChunkedTestContent(byte[] data, string contentType)
+        {
+            this.data = data;
+            Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        }
+
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+            => stream.WriteAsync(data, 0, data.Length);
+
+        // Returning false forces HttpClient to omit Content-Length and use chunked transfer
+        // encoding; the server then sees Request.ContentLength == null.
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
     }
 
     private sealed class InMemoryNonceStore : IHmacNonceStore

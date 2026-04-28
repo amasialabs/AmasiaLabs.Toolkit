@@ -53,6 +53,8 @@ public sealed partial class HmacAuthenticationHandler(
         var signature = signatureValues.ToString();
 
         string payload;
+        CanonicalPayloadResult? canonicalContext = null;
+
         if (Options.BuildPayload is not null)
         {
             // Custom hook always wins — preserves backward compatibility.
@@ -60,11 +62,12 @@ public sealed partial class HmacAuthenticationHandler(
         }
         else if (Options.PayloadMode == HmacPayloadMode.CanonicalRequest)
         {
-            var canonicalResult = await TryBuildCanonicalRequestAsync(clientId, Context.RequestAborted);
+            var canonicalResult = await TryBuildCanonicalRequestAsync(Context.RequestAborted);
             if (!canonicalResult.Success)
                 return AuthenticateResult.Fail(canonicalResult.Reason!);
 
             payload = canonicalResult.Payload!;
+            canonicalContext = canonicalResult;
         }
         else
         {
@@ -93,6 +96,19 @@ public sealed partial class HmacAuthenticationHandler(
             return AuthenticateResult.Fail("Signature validation error");
         }
 
+        // Register the nonce only AFTER the signature is verified, so unauthenticated
+        // requests cannot consume nonces and lock out legitimate ones.
+        if (canonicalContext is { Nonce: { } registeredNonce } ctx)
+        {
+            var nonceStore = Context.RequestServices.GetService<IHmacNonceStore>();
+            if (nonceStore is not null)
+            {
+                var registered = await nonceStore.TryRegisterAsync(clientId, registeredNonce, ctx.Timestamp, Context.RequestAborted);
+                if (!registered)
+                    return AuthenticateResult.Fail("Nonce already used");
+            }
+        }
+
         var claims = Options.ClaimsFactory?.Invoke(clientId)
                      ?? [new Claim(ClaimTypes.NameIdentifier, clientId), new Claim("client_id", clientId)];
 
@@ -112,7 +128,7 @@ public sealed partial class HmacAuthenticationHandler(
     protected override Task HandleForbiddenAsync(AuthenticationProperties properties)
         => ProblemDetailsWriter.WriteAsync(Context, StatusCodes.Status403Forbidden, "Forbidden");
 
-    private async Task<CanonicalPayloadResult> TryBuildCanonicalRequestAsync(string clientId, CancellationToken cancellationToken)
+    private async Task<CanonicalPayloadResult> TryBuildCanonicalRequestAsync(CancellationToken cancellationToken)
     {
         if (!Request.Headers.TryGetValue(Options.TimestampHeader, out var timestampValues)
             || StringValues.IsNullOrEmpty(timestampValues))
@@ -141,36 +157,27 @@ public sealed partial class HmacAuthenticationHandler(
 
         var nonce = nonceValues.ToString();
 
-        var nonceStore = Context.RequestServices.GetService<IHmacNonceStore>();
-        if (nonceStore is not null)
-        {
-            var registered = await nonceStore.TryRegisterAsync(clientId, nonce, timestamp, cancellationToken);
-            if (!registered)
-            {
-                return CanonicalPayloadResult.Fail("Nonce already used");
-            }
-        }
-
         var bodyHashHex = await ComputeBodyHashHexAsync(cancellationToken);
 
+        // The canonical string signs the RAW timestamp header value, not the parsed-and-
+        // reformatted version. This way clients can use any DateTimeOffset-parseable format
+        // and the round-trip is preserved by definition: server signs what client sent.
         var canonical = string.Join('\n',
             Request.Method.ToUpperInvariant(),
             Request.Path.HasValue ? Request.Path.Value : "/",
             Request.QueryString.HasValue ? Request.QueryString.Value!.TrimStart('?') : string.Empty,
-            timestamp.ToString("O", CultureInfo.InvariantCulture),
+            timestampRaw,
             nonce,
             bodyHashHex);
 
-        return CanonicalPayloadResult.Ok(canonical);
+        return CanonicalPayloadResult.Ok(canonical, timestamp, nonce);
     }
 
     private async Task<string> ComputeBodyHashHexAsync(CancellationToken cancellationToken)
     {
-        if (Request.ContentLength.GetValueOrDefault() <= 0)
-        {
-            return Convert.ToHexString(SHA256.HashData(ReadOnlySpan<byte>.Empty)).ToLowerInvariant();
-        }
-
+        // Always read the actual body. Treating ContentLength == null as empty would silently
+        // un-authenticate any chunked/streamed body — an attacker could send arbitrary payload
+        // bytes while signing the empty-body hash, and the server would match.
         Request.EnableBuffering();
         using var sha = SHA256.Create();
         var hash = await sha.ComputeHashAsync(Request.Body, cancellationToken);
@@ -183,16 +190,23 @@ public sealed partial class HmacAuthenticationHandler(
         public bool Success { get; }
         public string? Payload { get; }
         public string? Reason { get; }
+        public DateTimeOffset Timestamp { get; }
+        public string? Nonce { get; }
 
-        private CanonicalPayloadResult(bool success, string? payload, string? reason)
+        private CanonicalPayloadResult(bool success, string? payload, string? reason, DateTimeOffset timestamp, string? nonce)
         {
             Success = success;
             Payload = payload;
             Reason = reason;
+            Timestamp = timestamp;
+            Nonce = nonce;
         }
 
-        public static CanonicalPayloadResult Ok(string payload) => new(true, payload, null);
-        public static CanonicalPayloadResult Fail(string reason) => new(false, null, reason);
+        public static CanonicalPayloadResult Ok(string payload, DateTimeOffset timestamp, string nonce)
+            => new(true, payload, null, timestamp, nonce);
+
+        public static CanonicalPayloadResult Fail(string reason)
+            => new(false, null, reason, default, null);
     }
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Error validating signature for client {ClientId}")]
