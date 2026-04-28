@@ -13,11 +13,15 @@ namespace AmasiaLabs.Toolkit.MinimalApi.Auth.Jwt;
 /// JWT Bearer authentication helpers with sensible defaults:
 /// - Reads token from cookie (default: "jc") when Authorization header is absent.
 /// - Emits RFC 7807 ProblemDetails for 401/403 using ProblemHandlingOptions.
-/// - Provides configuration-based and explicit overloads.
+/// - Composes (rather than replaces) user-provided JwtBearerEvents handlers, so
+///   custom OnMessageReceived/OnTokenValidated/etc coexist with toolkit behavior.
+/// - Provides configuration-based, explicit, and options-object overloads.
 /// </summary>
 public static class JwtBearerExtensions
 {
     private const string DefaultJwtSectionPath = "Amasia:Toolkit:MinimalApi:Jwt";
+    private const string DefaultCookieName = "jc";
+
     /// <summary>
     /// Adds JWT Bearer authentication with defaults and reads configuration values.
     /// Uses configuration keys under "Amasia:Toolkit:MinimalApi:Jwt" (Issuer, Audience, Key).
@@ -30,7 +34,7 @@ public static class JwtBearerExtensions
     public static IServiceCollection AddJwtAuthentication(
         this IServiceCollection services,
         IConfiguration configuration,
-        string cookieName = "jc")
+        string cookieName = DefaultCookieName)
     {
         var (issuer, audience, signingKey) = ResolveJwtSettings(configuration);
 
@@ -74,6 +78,28 @@ public static class JwtBearerExtensions
     }
 
     /// <summary>
+    /// Adds JWT Bearer authentication using an explicit <see cref="JwtAuthenticationOptions"/>.
+    /// Composes the toolkit's cookie extraction and ProblemDetails 401/403 events on top of any
+    /// events configured via <see cref="JwtAuthenticationOptions.ConfigureJwtBearer"/>.
+    /// </summary>
+    public static IServiceCollection AddJwtAuthentication(
+        this IServiceCollection services,
+        JwtAuthenticationOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        services
+            .AddAuthentication(authOptions =>
+            {
+                authOptions.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                authOptions.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearerWithProblemDetails(options);
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds a JWT bearer handler to the builder with defaults, reading configuration values.
     /// Uses configuration keys under "Amasia:Toolkit:Jwt" (Issuer, Audience, Key).
     /// Falls back to a legacy "Jwt" section when the default path is missing.
@@ -86,7 +112,7 @@ public static class JwtBearerExtensions
     public static AuthenticationBuilder AddJwtBearerWithProblemDetails(
         this AuthenticationBuilder builder,
         IConfiguration configuration,
-        string cookieName = "jc")
+        string cookieName = DefaultCookieName)
     {
         var (issuer, audience, signingKey) = ResolveJwtSettings(configuration);
         return builder.AddJwtBearerWithProblemDetails(issuer, audience, signingKey, cookieName);
@@ -129,48 +155,100 @@ public static class JwtBearerExtensions
         string issuer,
         string audience,
         string signingKey,
-        string cookieName = "jc",
+        string cookieName = DefaultCookieName,
         Action<JwtBearerOptions>? configure = null)
     {
-        return builder.AddJwtBearer(options =>
+        return builder.AddJwtBearerWithProblemDetails(new JwtAuthenticationOptions
         {
-            options.TokenValidationParameters = new TokenValidationParameters
+            Issuer = issuer,
+            Audience = audience,
+            SigningKey = signingKey,
+            CookieName = cookieName,
+            ConfigureJwtBearer = configure,
+        });
+    }
+
+    /// <summary>
+    /// Adds a JWT bearer handler configured via an explicit <see cref="JwtAuthenticationOptions"/>.
+    /// The toolkit's cookie extraction and ProblemDetails 401/403 handlers are composed on top of
+    /// any events configured via <see cref="JwtAuthenticationOptions.ConfigureJwtBearer"/>, so
+    /// custom event handlers coexist with toolkit behavior.
+    /// </summary>
+    public static AuthenticationBuilder AddJwtBearerWithProblemDetails(
+        this AuthenticationBuilder builder,
+        JwtAuthenticationOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentException.ThrowIfNullOrWhiteSpace(options.Issuer);
+        ArgumentException.ThrowIfNullOrWhiteSpace(options.Audience);
+        ArgumentException.ThrowIfNullOrWhiteSpace(options.SigningKey);
+
+        return builder.AddJwtBearer(jbo =>
+        {
+            jbo.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = issuer,
-                ValidAudience = audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey))
+                ValidIssuer = options.Issuer,
+                ValidAudience = options.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.SigningKey)),
             };
+            options.ConfigureTokenValidationParameters?.Invoke(jbo.TokenValidationParameters);
 
-            options.Events = new JwtBearerEvents
-            {
-                OnMessageReceived = context =>
-                {
-                    if (string.IsNullOrEmpty(context.Token))
-                    {
-                        if (!string.IsNullOrEmpty(cookieName) &&
-                            context.Request.Cookies.TryGetValue(cookieName, out var token) &&
-                            !string.IsNullOrWhiteSpace(token))
-                        {
-                            context.Token = token;
-                        }
-                    }
-                    return Task.CompletedTask;
-                },
-                OnChallenge = ctx =>
-                {
-                    ctx.HandleResponse();
-                    return ProblemDetailsWriter.WriteAsync(ctx.HttpContext, StatusCodes.Status401Unauthorized, "Unauthorized");
-                },
-                OnForbidden = ctx =>
-                    ProblemDetailsWriter.WriteAsync(ctx.HttpContext, StatusCodes.Status403Forbidden, "Forbidden")
-            };
+            // Run user's JwtBearerOptions configuration FIRST, so any event handlers
+            // they assign are visible to the composition step below.
+            options.ConfigureJwtBearer?.Invoke(jbo);
 
-            configure?.Invoke(options);
+            ComposeToolkitEvents(jbo, options.CookieName, options.ReadTokenFromCookie);
         });
+    }
+
+    /// <summary>
+    /// Wraps the existing JwtBearerEvents handlers in place, chaining toolkit logic after any
+    /// user-provided handlers. Mutates <see cref="JwtBearerOptions.Events"/> rather than replacing
+    /// it, so all other event handlers (OnTokenValidated, OnAuthenticationFailed, etc.) survive
+    /// untouched.
+    /// </summary>
+    private static void ComposeToolkitEvents(JwtBearerOptions jbo, string cookieName, bool readTokenFromCookie)
+    {
+        jbo.Events ??= new JwtBearerEvents();
+
+        var userOnMessageReceived = jbo.Events.OnMessageReceived;
+        jbo.Events.OnMessageReceived = async ctx =>
+        {
+            await userOnMessageReceived(ctx);
+            if (readTokenFromCookie
+                && string.IsNullOrEmpty(ctx.Token)
+                && !string.IsNullOrEmpty(cookieName)
+                && ctx.Request.Cookies.TryGetValue(cookieName, out var token)
+                && !string.IsNullOrWhiteSpace(token))
+            {
+                ctx.Token = token;
+            }
+        };
+
+        var userOnChallenge = jbo.Events.OnChallenge;
+        jbo.Events.OnChallenge = async ctx =>
+        {
+            await userOnChallenge(ctx);
+            if (ctx.Response.HasStarted)
+                return;
+
+            ctx.HandleResponse();
+            await ProblemDetailsWriter.WriteAsync(ctx.HttpContext, StatusCodes.Status401Unauthorized, "Unauthorized");
+        };
+
+        var userOnForbidden = jbo.Events.OnForbidden;
+        jbo.Events.OnForbidden = async ctx =>
+        {
+            await userOnForbidden(ctx);
+            if (ctx.Response.HasStarted)
+                return;
+
+            await ProblemDetailsWriter.WriteAsync(ctx.HttpContext, StatusCodes.Status403Forbidden, "Forbidden");
+        };
     }
 
     private static (string Issuer, string Audience, string Key) ResolveJwtSettings(IConfiguration configuration)
