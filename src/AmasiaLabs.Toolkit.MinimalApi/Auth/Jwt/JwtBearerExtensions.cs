@@ -211,9 +211,17 @@ public static class JwtBearerExtensions
     /// event method (not just delegate properties), so toolkit behavior survives both extension
     /// styles: assigning delegate properties (<c>o.Events.OnFoo = ...</c>) AND subclassing
     /// <see cref="JwtBearerEvents"/> with overridden virtual methods.
+    ///
+    /// Idempotent: if the events are already a <see cref="ToolkitJwtBearerEvents"/> (e.g. when
+    /// AddJwtBearerWithProblemDetails is called more than once on the same options instance via
+    /// configuration callback chaining), the call is a no-op rather than recursively wrapping.
+    /// First call's cookieName / readTokenFromCookie wins.
     /// </summary>
     private static void ComposeToolkitEvents(JwtBearerOptions jbo, string cookieName, bool readTokenFromCookie)
     {
+        if (jbo.Events is ToolkitJwtBearerEvents)
+            return;
+
         var inner = jbo.Events ?? new JwtBearerEvents();
         jbo.Events = new ToolkitJwtBearerEvents(inner, cookieName, readTokenFromCookie);
     }
