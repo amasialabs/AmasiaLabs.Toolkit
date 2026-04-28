@@ -11,7 +11,8 @@ public static class PodmanSecretsConfigurationExtensions
         this IConfigurationBuilder configuration,
         string directory = "/run/secrets",
         bool requireDirectory = false,
-        bool throwOnError = true)
+        bool throwOnError = true,
+        string? prefix = null)
     {
         if (!Directory.Exists(directory))
         {
@@ -20,6 +21,8 @@ public static class PodmanSecretsConfigurationExtensions
                 return configuration;
             }
         }
+
+        var normalizedPrefix = NormalizePrefix(prefix);
 
         var data = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
@@ -32,6 +35,10 @@ public static class PodmanSecretsConfigurationExtensions
             }
 
             var key = file.Replace("__", ":", StringComparison.Ordinal);
+            if (normalizedPrefix is not null)
+            {
+                key = $"{normalizedPrefix}:{key}";
+            }
 
             try
             {
@@ -59,9 +66,19 @@ public static class PodmanSecretsConfigurationExtensions
         this IHostApplicationBuilder builder,
         string directory = "/run/secrets",
         bool requireDirectory = false,
-        bool throwOnError = false)
+        bool throwOnError = false,
+        string? prefix = null)
     {
-        builder.Configuration.AddPodmanSecrets(directory, requireDirectory, throwOnError);
+        builder.Configuration.AddPodmanSecrets(directory, requireDirectory, throwOnError, prefix);
         return builder;
+    }
+
+    private static string? NormalizePrefix(string? prefix)
+    {
+        if (string.IsNullOrWhiteSpace(prefix))
+            return null;
+
+        var trimmed = prefix.TrimEnd(':');
+        return trimmed.Length == 0 ? null : trimmed;
     }
 }

@@ -1,5 +1,6 @@
 using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 using AmasiaLabs.Toolkit.FlowflakeId.Extensions;
+using AmasiaLabs.Toolkit.FlowflakeId.Extensions.Codecs;
 using FluentAssertions;
 using Xunit;
 
@@ -122,5 +123,136 @@ public class FlowflakeIdFormattingExtensionsTests
 
             decoded.Should().Be(value, $"Should round-trip with {codec} codec");
         }
+    }
+
+    [Theory]
+    [InlineData("Cc8j1VVxju", FlowflakeIdCodec.Base62, 170772692876656674L)]
+    [InlineData("PzWG4cu1Cu", FlowflakeIdCodec.Base58, 170772692876656674L)]
+    [InlineData("8M0kX", FlowflakeIdCodec.Base62, 123456789L)]
+    public void TryParseFlowflakeId_WithValidInput_Should_Return_True_And_Match_ParseFlowflakeId(string encoded, FlowflakeIdCodec codec, long expected)
+    {
+        // Act
+        var success = encoded.TryParseFlowflakeId(out var value, codec);
+
+        // Assert
+        success.Should().BeTrue();
+        value.Should().Be(expected);
+        value.Should().Be(encoded.ParseFlowflakeId(codec));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("not-base62-!@#")]
+    public void TryParseFlowflakeId_WithInvalidInput_Should_Return_False_And_Zero(string? input)
+    {
+        // Act
+        var success = input.TryParseFlowflakeId(out var value);
+
+        // Assert
+        success.Should().BeFalse();
+        value.Should().Be(0L);
+    }
+
+    [Fact]
+    public void TryParseFlowflakeId_WithOverflow_Should_Return_False()
+    {
+        // Arrange — 12 'z' chars in Base62 overflows ulong (max is ~11 chars for 2^64)
+        const string overflowing = "zzzzzzzzzzzzz";
+
+        // Act
+        var success = overflowing.TryParseFlowflakeId(out var value, FlowflakeIdCodec.Base62);
+
+        // Assert
+        success.Should().BeFalse();
+        value.Should().Be(0L);
+    }
+
+    [Fact]
+    public void TryParseFlowflakeId_WithCodecInstance_Should_Decode_ValidInput()
+    {
+        // Arrange
+        const long original = 170772692876656674L;
+        var codec = FlowflakeIdCodecProvider.GetCodec(FlowflakeIdCodec.Base62);
+        var encoded = codec.Encode(original);
+
+        // Act
+        var success = encoded.TryParseFlowflakeId(codec, out var value);
+
+        // Assert
+        success.Should().BeTrue();
+        value.Should().Be(original);
+    }
+
+    [Fact]
+    public void TryParseFlowflakeId_WithNullCodecInstance_Should_Throw()
+    {
+        // Arrange
+        const string encoded = "anything";
+
+        // Act
+        var act = () => encoded.TryParseFlowflakeId(null!, out _);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("codec");
+    }
+
+    [Fact]
+    public void TryFormatFlowflakeId_WithValidValue_Should_Return_True_And_Match_FormatFlowflakeId()
+    {
+        // Arrange
+        const long value = 123456789L;
+
+        // Act
+        var success = value.TryFormatFlowflakeId(FlowflakeIdCodec.Base62, out var text);
+
+        // Assert
+        success.Should().BeTrue();
+        text.Should().Be("8M0kX");
+        text.Should().Be(value.FormatFlowflakeId(FlowflakeIdCodec.Base62));
+    }
+
+    [Fact]
+    public void TryFormatFlowflakeId_WithCodecInstance_Should_Encode()
+    {
+        // Arrange
+        const long value = 170772692876656674L;
+        var codec = FlowflakeIdCodecProvider.GetCodec(FlowflakeIdCodec.Base58);
+
+        // Act
+        var success = value.TryFormatFlowflakeId(codec, out var text);
+
+        // Assert
+        success.Should().BeTrue();
+        text.Should().Be("PzWG4cu1Cu");
+    }
+
+    [Fact]
+    public void TryFormatFlowflakeId_WithNullCodecInstance_Should_Throw()
+    {
+        // Arrange
+        const long value = 123456789L;
+
+        // Act
+        var act = () => value.TryFormatFlowflakeId(null!, out _);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("codec");
+    }
+
+    [Fact]
+    public void TryFormatFlowflakeId_RoundTrip_With_TryParseFlowflakeId_Should_Match()
+    {
+        // Arrange
+        const long original = 9876543210L;
+
+        // Act
+        var formatted = original.TryFormatFlowflakeId(FlowflakeIdCodec.Base62, out var text);
+        var parsed = text.TryParseFlowflakeId(out var value, FlowflakeIdCodec.Base62);
+
+        // Assert
+        formatted.Should().BeTrue();
+        parsed.Should().BeTrue();
+        value.Should().Be(original);
     }
 }
