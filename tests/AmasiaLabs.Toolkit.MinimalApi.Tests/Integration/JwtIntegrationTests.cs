@@ -185,4 +185,97 @@ public class JwtIntegrationTests
         pd!.Status.Should().Be(StatusCodes.Status401Unauthorized);
         pd.Title.Should().Be("Unauthorized");
     }
+
+    [Fact]
+    public async Task User_OnChallenge_Calling_HandleResponse_Should_Suppress_Toolkit_ProblemDetails()
+    {
+        // The user's OnChallenge calls ctx.HandleResponse() to signal "I'm taking over"
+        // and sets a custom status. The toolkit must respect Handled and not overwrite,
+        // even though the response body has not yet started.
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddLogging();
+        builder.Services.AddGlobalExceptionHandling();
+
+        builder.Services
+            .AddAuthentication()
+            .AddJwtBearerWithProblemDetails(
+                issuer: "test-iss",
+                audience: "test-aud",
+                signingKey: "super-secret-test-key",
+                cookieName: "jc",
+                configure: o =>
+                {
+                    o.Events.OnChallenge = ctx =>
+                    {
+                        ctx.HandleResponse();
+                        ctx.Response.StatusCode = StatusCodes.Status418ImATeapot;
+                        return Task.CompletedTask;
+                    };
+                });
+        builder.Services.AddAuthorization();
+
+        var app = builder.Build();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapGet("/secure", () => Results.Ok()).RequireAuthorization();
+
+        await app.StartAsync(TestContext.Current.CancellationToken);
+        var client = app.GetTestClient();
+
+        var resp = await client.GetAsync("/secure", TestContext.Current.CancellationToken);
+
+        resp.StatusCode.Should().Be((HttpStatusCode)418, "user handled the challenge with HandleResponse(); toolkit must not overwrite");
+    }
+
+    [Fact]
+    public async Task Custom_JwtBearerEvents_Subclass_Override_Should_Coexist_With_Toolkit()
+    {
+        // The user provides a subclass overriding the virtual MessageReceived method
+        // (instead of assigning OnMessageReceived delegate). The toolkit's forwarding
+        // wrapper must still call the override AND still emit ProblemDetails 401.
+        var customRan = false;
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddLogging();
+        builder.Services.AddGlobalExceptionHandling();
+
+        builder.Services
+            .AddAuthentication()
+            .AddJwtBearerWithProblemDetails(
+                issuer: "test-iss",
+                audience: "test-aud",
+                signingKey: "super-secret-test-key",
+                cookieName: "jc",
+                configure: o =>
+                {
+                    o.Events = new TrackingEvents(() => customRan = true);
+                });
+        builder.Services.AddAuthorization();
+
+        var app = builder.Build();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapGet("/secure", () => Results.Ok()).RequireAuthorization().ProducesDefaultProblems();
+
+        await app.StartAsync(TestContext.Current.CancellationToken);
+        var client = app.GetTestClient();
+
+        var resp = await client.GetAsync("/secure", TestContext.Current.CancellationToken);
+        var pd = await resp.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        customRan.Should().BeTrue("subclass override of MessageReceived must be invoked");
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        pd!.Status.Should().Be(StatusCodes.Status401Unauthorized);
+        pd.Title.Should().Be("Unauthorized");
+    }
+
+    private sealed class TrackingEvents(Action onMessageReceived) : JwtBearerEvents
+    {
+        public override Task MessageReceived(MessageReceivedContext context)
+        {
+            onMessageReceived();
+            return Task.CompletedTask;
+        }
+    }
 }

@@ -206,49 +206,64 @@ public static class JwtBearerExtensions
     }
 
     /// <summary>
-    /// Wraps the existing JwtBearerEvents handlers in place, chaining toolkit logic after any
-    /// user-provided handlers. Mutates <see cref="JwtBearerOptions.Events"/> rather than replacing
-    /// it, so all other event handlers (OnTokenValidated, OnAuthenticationFailed, etc.) survive
-    /// untouched.
+    /// Wraps the user's <see cref="JwtBearerEvents"/> in a forwarding subclass that runs the
+    /// inner handler first and then chains toolkit logic. The wrapper overrides every virtual
+    /// event method (not just delegate properties), so toolkit behavior survives both extension
+    /// styles: assigning delegate properties (<c>o.Events.OnFoo = ...</c>) AND subclassing
+    /// <see cref="JwtBearerEvents"/> with overridden virtual methods.
     /// </summary>
     private static void ComposeToolkitEvents(JwtBearerOptions jbo, string cookieName, bool readTokenFromCookie)
     {
-        jbo.Events ??= new JwtBearerEvents();
+        var inner = jbo.Events ?? new JwtBearerEvents();
+        jbo.Events = new ToolkitJwtBearerEvents(inner, cookieName, readTokenFromCookie);
+    }
 
-        var userOnMessageReceived = jbo.Events.OnMessageReceived;
-        jbo.Events.OnMessageReceived = async ctx =>
+    private sealed class ToolkitJwtBearerEvents(JwtBearerEvents inner, string cookieName, bool readTokenFromCookie)
+        : JwtBearerEvents
+    {
+        public override async Task MessageReceived(MessageReceivedContext context)
         {
-            await userOnMessageReceived(ctx);
+            await inner.MessageReceived(context);
+
             if (readTokenFromCookie
-                && string.IsNullOrEmpty(ctx.Token)
+                && string.IsNullOrEmpty(context.Token)
                 && !string.IsNullOrEmpty(cookieName)
-                && ctx.Request.Cookies.TryGetValue(cookieName, out var token)
+                && context.Request.Cookies.TryGetValue(cookieName, out var token)
                 && !string.IsNullOrWhiteSpace(token))
             {
-                ctx.Token = token;
+                context.Token = token;
             }
-        };
+        }
 
-        var userOnChallenge = jbo.Events.OnChallenge;
-        jbo.Events.OnChallenge = async ctx =>
+        public override async Task Challenge(JwtBearerChallengeContext context)
         {
-            await userOnChallenge(ctx);
-            if (ctx.Response.HasStarted)
+            await inner.Challenge(context);
+
+            // Respect explicit user takeover. Handled is set by ctx.HandleResponse(), which
+            // signals "I'll handle this myself" even if no body has been written yet.
+            if (context.Handled || context.Response.HasStarted)
                 return;
 
-            ctx.HandleResponse();
-            await ProblemDetailsWriter.WriteAsync(ctx.HttpContext, StatusCodes.Status401Unauthorized, "Unauthorized");
-        };
+            context.HandleResponse();
+            await ProblemDetailsWriter.WriteAsync(context.HttpContext, StatusCodes.Status401Unauthorized, "Unauthorized");
+        }
 
-        var userOnForbidden = jbo.Events.OnForbidden;
-        jbo.Events.OnForbidden = async ctx =>
+        public override async Task Forbidden(ForbiddenContext context)
         {
-            await userOnForbidden(ctx);
-            if (ctx.Response.HasStarted)
+            await inner.Forbidden(context);
+
+            if (context.Response.HasStarted)
                 return;
 
-            await ProblemDetailsWriter.WriteAsync(ctx.HttpContext, StatusCodes.Status403Forbidden, "Forbidden");
-        };
+            await ProblemDetailsWriter.WriteAsync(context.HttpContext, StatusCodes.Status403Forbidden, "Forbidden");
+        }
+
+        // Forward the remaining events untouched so user overrides/delegates survive.
+        public override Task TokenValidated(TokenValidatedContext context)
+            => inner.TokenValidated(context);
+
+        public override Task AuthenticationFailed(AuthenticationFailedContext context)
+            => inner.AuthenticationFailed(context);
     }
 
     private static (string Issuer, string Audience, string Key) ResolveJwtSettings(IConfiguration configuration)
