@@ -5,8 +5,6 @@ using AmasiaLabs.Toolkit.MinimalApi.Problems;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -95,36 +93,12 @@ public sealed partial class HmacAuthenticationHandler(
 
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
     {
-        Response.StatusCode = StatusCodes.Status401Unauthorized;
         Response.Headers.Append("WWW-Authenticate", Options.WwwAuthenticateScheme);
-
-        var status = StatusCodes.Status401Unauthorized;
-        var pd = new ProblemDetails { Status = status, Title = "Unauthorized" };
-
-        var pds = Context.RequestServices.GetRequiredService<IProblemDetailsService>();
-        var context = new ProblemDetailsContext
-        {
-            HttpContext = Context,
-            ProblemDetails = pd
-        };
-        return pds.WriteAsync(context).AsTask();
+        return ProblemDetailsWriter.WriteAsync(Context, StatusCodes.Status401Unauthorized, "Unauthorized");
     }
 
     protected override Task HandleForbiddenAsync(AuthenticationProperties properties)
-    {
-        Response.StatusCode = StatusCodes.Status403Forbidden;
-
-        var status = StatusCodes.Status403Forbidden;
-        var pd = new ProblemDetails { Status = status, Title = "Forbidden" };
-
-        var pds = Context.RequestServices.GetRequiredService<IProblemDetailsService>();
-        var context = new ProblemDetailsContext
-        {
-            HttpContext = Context,
-            ProblemDetails = pd
-        };
-        return pds.WriteAsync(context).AsTask();
-    }
+        => ProblemDetailsWriter.WriteAsync(Context, StatusCodes.Status403Forbidden, "Forbidden");
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Error validating signature for client {ClientId}")]
     private static partial void LogSignatureValidationError(ILogger logger, Exception exception, string clientId);

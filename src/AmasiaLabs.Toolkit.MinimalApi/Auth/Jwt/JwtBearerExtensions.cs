@@ -3,7 +3,6 @@ using AmasiaLabs.Toolkit.MinimalApi.Problems;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -164,30 +163,10 @@ public static class JwtBearerExtensions
                 OnChallenge = ctx =>
                 {
                     ctx.HandleResponse();
-                    var status = StatusCodes.Status401Unauthorized;
-                    var pd = new ProblemDetails { Status = status, Title = "Unauthorized" };
-                    ctx.Response.StatusCode = status;
-                    var pds = ctx.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
-                    var context = new ProblemDetailsContext
-                    {
-                        HttpContext = ctx.HttpContext,
-                        ProblemDetails = pd
-                    };
-                    return pds.WriteAsync(context).AsTask();
+                    return ProblemDetailsWriter.WriteAsync(ctx.HttpContext, StatusCodes.Status401Unauthorized, "Unauthorized");
                 },
                 OnForbidden = ctx =>
-                {
-                    var status = StatusCodes.Status403Forbidden;
-                    var pd = new ProblemDetails { Status = status, Title = "Forbidden" };
-                    ctx.Response.StatusCode = status;
-                    var pds = ctx.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
-                    var context = new ProblemDetailsContext
-                    {
-                        HttpContext = ctx.HttpContext,
-                        ProblemDetails = pd
-                    };
-                    return pds.WriteAsync(context).AsTask();
-                }
+                    ProblemDetailsWriter.WriteAsync(ctx.HttpContext, StatusCodes.Status403Forbidden, "Forbidden")
             };
 
             configure?.Invoke(options);
