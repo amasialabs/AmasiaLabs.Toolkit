@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text;
 using AmasiaLabs.Toolkit.MinimalApi.Auth.Hmac;
 using AmasiaLabs.Toolkit.MinimalApi.Problems;
@@ -61,7 +63,10 @@ public class HmacIntegrationTests
         values!.Single().Should().Be(TestHmacSignature.Sign(key, expectedResponsePayload));
     }
 
-    private static async Task<(WebApplication App, HttpClient Client)> BuildHmacApp(bool signResponses = false)
+    private static async Task<(WebApplication App, HttpClient Client)> BuildHmacApp(
+        bool signResponses = false,
+        Action<HmacAuthenticationOptions>? configureHmac = null,
+        Action<IServiceCollection>? extraServices = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
@@ -73,8 +78,9 @@ public class HmacIntegrationTests
         builder.Services.AddSingleton<IHmacKeyProvider, TestHmacKeyProvider>();
         builder.Services.AddSingleton<IHmacSignatureValidator, TestHmacSignatureValidator>();
         builder.Services.AddSingleton<IHmacSignatureSigner, TestHmacSignatureSigner>();
+        extraServices?.Invoke(builder.Services);
 
-        builder.Services.AddHmacAuthentication(setAsDefault: true);
+        builder.Services.AddHmacAuthentication(setAsDefault: true, configure: configureHmac);
         builder.Services.AddAuthorization();
 
         var app = builder.Build();
@@ -101,7 +107,15 @@ public class HmacIntegrationTests
 
     private static class TestHmacSignature
     {
-        public static string Sign(string key, string payload) => $"sig:{key}:{payload}";
+        // Header-safe digest. Real HMAC also produces fixed-size encoded output,
+        // so this is a closer stand-in than a literal payload echo. Without this
+        // hashing step a canonical-request payload (which contains "\n") would
+        // produce a signature string that HttpClient rejects in headers.
+        public static string Sign(string key, string payload)
+        {
+            var bytes = Encoding.UTF8.GetBytes($"sig:{key}:{payload}");
+            return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        }
     }
 
     private sealed class TestHmacKeyProvider : IHmacKeyProvider
@@ -121,5 +135,179 @@ public class HmacIntegrationTests
     private sealed class TestHmacSignatureSigner : IHmacSignatureSigner
     {
         public string ComputeSignature(string key, string payload) => TestHmacSignature.Sign(key, payload);
+    }
+
+    // =====================================================================
+    // Canonical-request mode (PR-5). The BodyOnly default is preserved by
+    // the tests above; everything below here exercises the opt-in mode.
+    // =====================================================================
+
+    [Fact]
+    public async Task Canonical_Mode_Valid_Request_Should_Return_200()
+    {
+        var (_, client) = await BuildHmacApp(configureHmac: o => o.PayloadMode = HmacPayloadMode.CanonicalRequest);
+
+        var body = "hello";
+        var timestamp = DateTimeOffset.UtcNow;
+        var nonce = "n-1";
+        var canonical = BuildCanonicalRequest("POST", "/secure-echo", "", timestamp, nonce, body);
+        var signature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, canonical);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "text/plain"),
+        };
+        req.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+        req.Headers.Add("X-Signature", signature);
+        req.Headers.Add("X-Timestamp", timestamp.ToString("O", CultureInfo.InvariantCulture));
+        req.Headers.Add("X-Nonce", nonce);
+
+        var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Canonical_Mode_Missing_Timestamp_Should_Return_401()
+    {
+        var (_, client) = await BuildHmacApp(configureHmac: o => o.PayloadMode = HmacPayloadMode.CanonicalRequest);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
+        {
+            Content = new StringContent("hello", Encoding.UTF8, "text/plain"),
+        };
+        req.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+        req.Headers.Add("X-Signature", "anything");
+        req.Headers.Add("X-Nonce", "n-1");
+        // No X-Timestamp
+
+        var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Canonical_Mode_Missing_Nonce_Should_Return_401()
+    {
+        var (_, client) = await BuildHmacApp(configureHmac: o => o.PayloadMode = HmacPayloadMode.CanonicalRequest);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
+        {
+            Content = new StringContent("hello", Encoding.UTF8, "text/plain"),
+        };
+        req.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+        req.Headers.Add("X-Signature", "anything");
+        req.Headers.Add("X-Timestamp", DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+        // No X-Nonce
+
+        var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Canonical_Mode_Stale_Timestamp_Should_Return_401()
+    {
+        // 10 minutes back is outside the default 5-minute clock-skew window.
+        var (_, client) = await BuildHmacApp(configureHmac: o => o.PayloadMode = HmacPayloadMode.CanonicalRequest);
+
+        var body = "hello";
+        var staleTimestamp = DateTimeOffset.UtcNow.AddMinutes(-10);
+        var nonce = "n-stale";
+        var canonical = BuildCanonicalRequest("POST", "/secure-echo", "", staleTimestamp, nonce, body);
+        var signature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, canonical);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "text/plain"),
+        };
+        req.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+        req.Headers.Add("X-Signature", signature);
+        req.Headers.Add("X-Timestamp", staleTimestamp.ToString("O", CultureInfo.InvariantCulture));
+        req.Headers.Add("X-Nonce", nonce);
+
+        var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Canonical_Mode_With_NonceStore_Should_Reject_Replay()
+    {
+        var nonceStore = new InMemoryNonceStore();
+        var (_, client) = await BuildHmacApp(
+            configureHmac: o => o.PayloadMode = HmacPayloadMode.CanonicalRequest,
+            extraServices: s => s.AddSingleton<IHmacNonceStore>(nonceStore));
+
+        var body = "hello";
+        var timestamp = DateTimeOffset.UtcNow;
+        var nonce = "n-replay";
+        var canonical = BuildCanonicalRequest("POST", "/secure-echo", "", timestamp, nonce, body);
+        var signature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, canonical);
+
+        HttpRequestMessage MakeReq()
+        {
+            var r = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
+            {
+                Content = new StringContent(body, Encoding.UTF8, "text/plain"),
+            };
+            r.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+            r.Headers.Add("X-Signature", signature);
+            r.Headers.Add("X-Timestamp", timestamp.ToString("O", CultureInfo.InvariantCulture));
+            r.Headers.Add("X-Nonce", nonce);
+            return r;
+        }
+
+        var first = await client.SendAsync(MakeReq(), TestContext.Current.CancellationToken);
+        first.StatusCode.Should().Be(HttpStatusCode.OK, "first request with the nonce should succeed");
+
+        var second = await client.SendAsync(MakeReq(), TestContext.Current.CancellationToken);
+        second.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "replay of the same nonce must be rejected");
+    }
+
+    [Fact]
+    public async Task BodyOnly_Default_Mode_Should_Not_Require_Timestamp_Or_Nonce()
+    {
+        // Regression guard: default (BodyOnly) mode keeps ignoring timestamp/nonce.
+        // Mirrors the existing Valid_Hmac test but explicitly omits the new headers
+        // and asserts no leakage of canonical-mode requirements into defaults.
+        var (_, client) = await BuildHmacApp();
+
+        var body = "hello";
+        var signature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, body);
+        var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "text/plain"),
+        };
+        req.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+        req.Headers.Add("X-Signature", signature);
+        // No X-Timestamp, no X-Nonce
+
+        var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    private static string BuildCanonicalRequest(
+        string method, string path, string query, DateTimeOffset timestamp, string nonce, string body)
+    {
+        var bodyBytes = Encoding.UTF8.GetBytes(body);
+        var bodyHashHex = Convert.ToHexString(SHA256.HashData(bodyBytes)).ToLowerInvariant();
+        return string.Join('\n',
+            method.ToUpperInvariant(),
+            path,
+            query,
+            timestamp.ToString("O", CultureInfo.InvariantCulture),
+            nonce,
+            bodyHashHex);
+    }
+
+    private sealed class InMemoryNonceStore : IHmacNonceStore
+    {
+        private readonly HashSet<string> seen = [];
+
+        public Task<bool> TryRegisterAsync(string clientId, string nonce, DateTimeOffset timestamp, CancellationToken cancellationToken = default)
+        {
+            lock (seen)
+            {
+                return Task.FromResult(seen.Add($"{clientId}|{nonce}"));
+            }
+        }
     }
 }

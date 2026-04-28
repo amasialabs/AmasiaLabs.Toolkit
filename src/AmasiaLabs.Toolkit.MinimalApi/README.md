@@ -363,6 +363,38 @@ builder.Services.AddSingleton<IHmacSignatureValidator, HmacSha256HexValidator>()
 // builder.Services.AddSingleton<IHmacSignatureValidator, HmacSha256Base64Validator>();
 ```
 
+### Payload modes (BodyOnly default vs canonical request)
+
+The handler supports two payload modes via `HmacAuthenticationOptions.PayloadMode`. The default preserves backward compatibility with existing clients.
+
+```csharp
+// Default (BodyOnly): the signature covers the raw request body only.
+// No timestamp/nonce headers are required; existing clients keep working unchanged.
+builder.Services.AddHmacAuthentication();
+
+// Opt-in canonical-request mode: the signature covers
+//   METHOD\nPATH\nQUERY\nTIMESTAMP\nNONCE\nSHA256_HEX(BODY)
+// and the handler additionally enforces a clock-skew window and an optional nonce store.
+builder.Services.AddHmacAuthentication(configure: opts =>
+{
+    opts.PayloadMode = HmacPayloadMode.CanonicalRequest;
+    // opts.TimestampHeader = "X-Timestamp"; // default
+    // opts.NonceHeader     = "X-Nonce";     // default
+    // opts.AllowedClockSkew = TimeSpan.FromMinutes(5); // default
+});
+
+// Replay protection (optional): register an IHmacNonceStore implementation.
+// If absent, the request is still validated, but nonces are not enforced single-use.
+builder.Services.AddSingleton<IHmacNonceStore, MyRedisNonceStore>();
+```
+
+When `PayloadMode == CanonicalRequest`:
+- Requests missing the timestamp or nonce header are rejected (401).
+- Timestamps outside `AllowedClockSkew` (forward or backward) are rejected.
+- If `IHmacNonceStore` is registered, repeated `(clientId, nonce)` tuples are rejected.
+
+`BuildPayload` (when set) takes precedence over `PayloadMode` — callers who customized payload extraction keep their existing behavior regardless of mode.
+
 ## API Key Auth
 
 API Key authentication with ProblemDetails for 401/403 and an `ApiKeyOnly` policy.

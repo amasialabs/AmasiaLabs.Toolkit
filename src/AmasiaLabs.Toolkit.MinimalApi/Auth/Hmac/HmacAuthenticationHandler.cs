@@ -1,10 +1,13 @@
+using System.Globalization;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using AmasiaLabs.Toolkit.MinimalApi.Problems;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -52,7 +55,16 @@ public sealed partial class HmacAuthenticationHandler(
         string payload;
         if (Options.BuildPayload is not null)
         {
+            // Custom hook always wins — preserves backward compatibility.
             payload = await Options.BuildPayload(Context);
+        }
+        else if (Options.PayloadMode == HmacPayloadMode.CanonicalRequest)
+        {
+            var canonicalResult = await TryBuildCanonicalRequestAsync(clientId, Context.RequestAborted);
+            if (!canonicalResult.Success)
+                return AuthenticateResult.Fail(canonicalResult.Reason!);
+
+            payload = canonicalResult.Payload!;
         }
         else
         {
@@ -99,6 +111,89 @@ public sealed partial class HmacAuthenticationHandler(
 
     protected override Task HandleForbiddenAsync(AuthenticationProperties properties)
         => ProblemDetailsWriter.WriteAsync(Context, StatusCodes.Status403Forbidden, "Forbidden");
+
+    private async Task<CanonicalPayloadResult> TryBuildCanonicalRequestAsync(string clientId, CancellationToken cancellationToken)
+    {
+        if (!Request.Headers.TryGetValue(Options.TimestampHeader, out var timestampValues)
+            || StringValues.IsNullOrEmpty(timestampValues))
+        {
+            return CanonicalPayloadResult.Fail($"Missing {Options.TimestampHeader} header");
+        }
+
+        if (!Request.Headers.TryGetValue(Options.NonceHeader, out var nonceValues)
+            || StringValues.IsNullOrEmpty(nonceValues))
+        {
+            return CanonicalPayloadResult.Fail($"Missing {Options.NonceHeader} header");
+        }
+
+        var timestampRaw = timestampValues.ToString();
+        if (!DateTimeOffset.TryParse(timestampRaw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var timestamp))
+        {
+            return CanonicalPayloadResult.Fail("Invalid timestamp format");
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var skew = (now - timestamp).Duration();
+        if (skew > Options.AllowedClockSkew)
+        {
+            return CanonicalPayloadResult.Fail("Timestamp outside allowed clock skew");
+        }
+
+        var nonce = nonceValues.ToString();
+
+        var nonceStore = Context.RequestServices.GetService<IHmacNonceStore>();
+        if (nonceStore is not null)
+        {
+            var registered = await nonceStore.TryRegisterAsync(clientId, nonce, timestamp, cancellationToken);
+            if (!registered)
+            {
+                return CanonicalPayloadResult.Fail("Nonce already used");
+            }
+        }
+
+        var bodyHashHex = await ComputeBodyHashHexAsync(cancellationToken);
+
+        var canonical = string.Join('\n',
+            Request.Method.ToUpperInvariant(),
+            Request.Path.HasValue ? Request.Path.Value : "/",
+            Request.QueryString.HasValue ? Request.QueryString.Value!.TrimStart('?') : string.Empty,
+            timestamp.ToString("O", CultureInfo.InvariantCulture),
+            nonce,
+            bodyHashHex);
+
+        return CanonicalPayloadResult.Ok(canonical);
+    }
+
+    private async Task<string> ComputeBodyHashHexAsync(CancellationToken cancellationToken)
+    {
+        if (Request.ContentLength.GetValueOrDefault() <= 0)
+        {
+            return Convert.ToHexString(SHA256.HashData(ReadOnlySpan<byte>.Empty)).ToLowerInvariant();
+        }
+
+        Request.EnableBuffering();
+        using var sha = SHA256.Create();
+        var hash = await sha.ComputeHashAsync(Request.Body, cancellationToken);
+        Request.Body.Position = 0;
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private readonly struct CanonicalPayloadResult
+    {
+        public bool Success { get; }
+        public string? Payload { get; }
+        public string? Reason { get; }
+
+        private CanonicalPayloadResult(bool success, string? payload, string? reason)
+        {
+            Success = success;
+            Payload = payload;
+            Reason = reason;
+        }
+
+        public static CanonicalPayloadResult Ok(string payload) => new(true, payload, null);
+        public static CanonicalPayloadResult Fail(string reason) => new(false, null, reason);
+    }
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Error validating signature for client {ClientId}")]
     private static partial void LogSignatureValidationError(ILogger logger, Exception exception, string clientId);
