@@ -33,7 +33,7 @@ public sealed class FlowflakeIdGrpcClient(
 
     public async ValueTask<long> GenerateForDateAsync(DateTime targetDate, CancellationToken cancellationToken = default)
     {
-        var ts = Timestamp.FromDateTime(DateTime.SpecifyKind(targetDate, DateTimeKind.Utc));
+        var ts = Timestamp.FromDateTime(EnsureUtc(targetDate));
         var resp = await CallAsync((c, co) => c.GetIdForDateAsync(new DateRequest { Timestamp = ts }, co), cancellationToken);
         return resp.Id;
     }
@@ -137,12 +137,7 @@ public sealed class FlowflakeIdGrpcClient(
     private void InitializeFromServerInfo(ServerInfo fetched)
     {
         var epoch = fetched.Epoch?.ToDateTime() ?? throw new InvalidOperationException("Server epoch missing");
-        var epochUtc = epoch.Kind switch
-        {
-            DateTimeKind.Utc => epoch,
-            DateTimeKind.Local => epoch.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(epoch, DateTimeKind.Utc)
-        };
+        var epochUtc = EnsureUtc(epoch);
         Volatile.Write(ref _epochUtcTicks, epochUtc.Ticks);
         _layout = new FlowflakeLayout(
             fetched.TimestampShift,
@@ -154,6 +149,14 @@ public sealed class FlowflakeIdGrpcClient(
 
         _serverInfo = fetched;
     }
+
+    private static DateTime EnsureUtc(DateTime dt)
+        => dt.Kind switch
+        {
+            DateTimeKind.Utc => dt,
+            DateTimeKind.Local => dt.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+        };
 
     private FlowflakeIds.FlowflakeIdsClient GetClient(string address)
     {

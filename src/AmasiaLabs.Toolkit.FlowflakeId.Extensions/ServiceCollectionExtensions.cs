@@ -54,6 +54,34 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers Flowflake clock configuration without ID generation capabilities,
+    /// binding options from an explicit configuration section.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="section">The configuration section to bind from.</param>
+    /// <param name="configure">Optional action to further configure options after binding.</param>
+    public static IServiceCollection AddFlowflakeClock(
+        this IServiceCollection services,
+        IConfigurationSection section,
+        Action<FlowflakeClockOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(section);
+
+        var optionsBuilder = services
+            .AddOptionsWithValidateOnStart<FlowflakeClockOptions>()
+            .Bind(section)
+            .ValidateDataAnnotations();
+
+        if (configure is not null)
+        {
+            optionsBuilder.Configure(configure);
+        }
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers Flowflake ID services using configuration from registered IConfiguration service.
     /// Uses the default section path "Amasia:Toolkit:FlowflakeId".
     /// </summary>

@@ -53,4 +53,33 @@ public class FlowflakeGrpcTests(GrpcHostFixture fx) : IClassFixture<GrpcHostFixt
         var act = async () => await fx.Client.GenerateBatchAsync(10_001, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<RpcException>();
     }
+
+    [Fact]
+    public async Task GenerateForDate_Should_Convert_Local_DateTime_To_Utc()
+    {
+        // On UTC test runners ToLocalTime() is a no-op, so this assertion is
+        // primarily a regression guard for non-UTC dev machines. The conversion
+        // path itself is also indirectly validated by the Unspecified test below.
+        var ct = TestContext.Current.CancellationToken;
+        var utc = new DateTime(2023, 02, 15, 0, 0, 10, DateTimeKind.Utc);
+        var local = utc.ToLocalTime();
+
+        var id = await fx.Client.GenerateForDateAsync(local, ct);
+
+        id.GetTimestampFromFlowflakeId().Should().Be(10L);
+        id.GetDateTimeFromFlowflakeId(GrpcHostFixture.EpochUtc, GrpcHostFixture.Semantics).Should().Be(utc);
+    }
+
+    [Fact]
+    public async Task GenerateForDate_Should_Treat_Unspecified_DateTime_As_Utc()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var unspecified = new DateTime(2023, 02, 15, 0, 0, 10, DateTimeKind.Unspecified);
+        var expected = DateTime.SpecifyKind(unspecified, DateTimeKind.Utc);
+
+        var id = await fx.Client.GenerateForDateAsync(unspecified, ct);
+
+        id.GetTimestampFromFlowflakeId().Should().Be(10L);
+        id.GetDateTimeFromFlowflakeId(GrpcHostFixture.EpochUtc, GrpcHostFixture.Semantics).Should().Be(expected);
+    }
 }

@@ -90,13 +90,6 @@ services.AddFlowflakeClock(configuration);
 
 // Or with explicit section
 services.AddFlowflakeClock(configuration.GetSection("My:Custom:Section"));
-
-// Or with code-based configuration
-services.AddFlowflakeClock(options =>
-{
-    options.Epoch = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-    options.TimeSemantics = FlowflakeTimeSemantics.UtcNormalized;
-});
 ```
 
 Configuration format for decode-only:

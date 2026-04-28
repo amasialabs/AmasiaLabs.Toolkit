@@ -180,14 +180,13 @@ Configuration for decode-only:
   - Seconds are computed as a raw `DateTime` difference without UTC normalization.
   - Preserves historical behavior when `Epoch` was `Unspecified` and `Generate()` used `DateTime.Now`.
   - Use only to maintain exact continuity of existing IDs; prefer `UtcNormalized` for new systems.
-```
 
 ### Formatting (Codecs)
 
 Formatting/parsing of IDs is decoupled from `IFlowflakeId`.
 
 - Use `IIdCodec` to plug different formats (default: `NumericBase62Codec`).
-- Extension helpers are available: `FormatId` and `ParseId`.
+- Extension helpers are available: `FormatFlowflakeId` and `ParseFlowflakeId`.
 
 ```csharp
 var codec = new NumericBase62Codec();
@@ -198,8 +197,8 @@ string text = codec.Encode(id);
 long back = codec.Decode(text);
 
 // Or via extensions
-string text2 = id.FormatId(codec);
-long back2 = text2.ParseId(codec);
+string text2 = id.FormatFlowflakeId(codec);
+long back2 = text2.ParseFlowflakeId(codec);
 ```
 
 ## Backlog
