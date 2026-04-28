@@ -134,7 +134,7 @@ public class PodmanSecretsConfigurationExtensionsTests
 
         // Act
         var cfg = new ConfigurationBuilder()
-            .AddPodmanSecrets(dir.Path, prefix: "myapp")
+            .AddPodmanSecrets(dir.Path, requireDirectory: false, throwOnError: false, prefix: "myapp")
             .Build();
 
         // Assert

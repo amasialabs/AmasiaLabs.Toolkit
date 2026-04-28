@@ -25,7 +25,11 @@ builder.AddPodmanSecrets(
 
 // Or place all secrets under a configuration prefix (e.g., when sharing
 // a secrets directory across multiple services)
-builder.AddPodmanSecrets(prefix: "myapp");
+builder.AddPodmanSecrets(
+    directory: "/run/secrets",
+    requireDirectory: false,
+    throwOnError: false,
+    prefix: "myapp");
 // → file `db__password` becomes configuration key `myapp:db:password`
 ```
 

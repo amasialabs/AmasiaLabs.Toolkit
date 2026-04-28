@@ -6,13 +6,60 @@ namespace AmasiaLabs.Toolkit.Podman;
 public static class PodmanSecretsConfigurationExtensions
 {
     // ReSharper disable once MemberCanBePrivate.Global
-    // ReSharper disable once CognitiveComplexity
     public static IConfigurationBuilder AddPodmanSecrets(
         this IConfigurationBuilder configuration,
         string directory = "/run/secrets",
         bool requireDirectory = false,
-        bool throwOnError = true,
-        string? prefix = null)
+        bool throwOnError = true)
+        => AddPodmanSecretsCore(configuration, directory, requireDirectory, throwOnError, prefix: null);
+
+    /// <summary>
+    /// Adds Podman/Docker secrets to configuration, placing every key under the given <paramref name="prefix"/>.
+    /// Trailing colons in the prefix are trimmed. Pass null/empty/whitespace-only to behave as the no-prefix overload.
+    /// </summary>
+    /// <remarks>
+    /// All parameters are required to keep this overload binary-distinct from the no-prefix overload above.
+    /// </remarks>
+    public static IConfigurationBuilder AddPodmanSecrets(
+        this IConfigurationBuilder configuration,
+        string directory,
+        bool requireDirectory,
+        bool throwOnError,
+        string? prefix)
+        => AddPodmanSecretsCore(configuration, directory, requireDirectory, throwOnError, prefix);
+
+    public static IHostApplicationBuilder AddPodmanSecrets(
+        this IHostApplicationBuilder builder,
+        string directory = "/run/secrets",
+        bool requireDirectory = false,
+        bool throwOnError = false)
+    {
+        builder.Configuration.AddPodmanSecrets(directory, requireDirectory, throwOnError);
+        return builder;
+    }
+
+    /// <summary>
+    /// Host-builder overload that accepts a prefix. All parameters are required to keep this overload
+    /// binary-distinct from the no-prefix overload above.
+    /// </summary>
+    public static IHostApplicationBuilder AddPodmanSecrets(
+        this IHostApplicationBuilder builder,
+        string directory,
+        bool requireDirectory,
+        bool throwOnError,
+        string? prefix)
+    {
+        builder.Configuration.AddPodmanSecrets(directory, requireDirectory, throwOnError, prefix);
+        return builder;
+    }
+
+    // ReSharper disable once CognitiveComplexity
+    private static IConfigurationBuilder AddPodmanSecretsCore(
+        IConfigurationBuilder configuration,
+        string directory,
+        bool requireDirectory,
+        bool throwOnError,
+        string? prefix)
     {
         if (!Directory.Exists(directory))
         {
@@ -60,17 +107,6 @@ public static class PodmanSecretsConfigurationExtensions
         }
 
         return configuration;
-    }
-
-    public static IHostApplicationBuilder AddPodmanSecrets(
-        this IHostApplicationBuilder builder,
-        string directory = "/run/secrets",
-        bool requireDirectory = false,
-        bool throwOnError = false,
-        string? prefix = null)
-    {
-        builder.Configuration.AddPodmanSecrets(directory, requireDirectory, throwOnError, prefix);
-        return builder;
     }
 
     private static string? NormalizePrefix(string? prefix)
