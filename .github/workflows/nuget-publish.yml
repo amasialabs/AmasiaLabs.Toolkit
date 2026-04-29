@@ -59,42 +59,41 @@ jobs:
           echo "Tags on release SHA:"
           echo "$TAGS"
 
-          shopt -s nullglob
-          packages=(./artifacts/*.nupkg)
-          if (( ${#packages[@]} == 0 )); then
-            echo "No NuGet packages found in ./artifacts."
-            exit 0
-          fi
+          # Iterate packable src projects (via MSBuild evaluation, not nuspec sed) to
+          # decide which artifacts to publish. This matches what auto-tag-release.yml
+          # does and avoids fragile shell parsing of nuspec XML inside the nupkg.
+          while IFS= read -r csproj; do
+            json=$(dotnet msbuild "$csproj" -getProperty:PackageId,Version,IsPackable -nologo)
+            packable=$(echo "$json" | jq -r '.Properties.IsPackable')
+            pkg=$(echo     "$json" | jq -r '.Properties.PackageId')
+            ver=$(echo     "$json" | jq -r '.Properties.Version')
 
-          for pkg in "${packages[@]}"; do
-            # Extract Id and Version from the nuspec inside the nupkg
-            spec_id=$(unzip -p "$pkg" "*.nuspec" | sed -n 's:.*<id>\(.*\)</id>.*:\1:p' | head -n1)
-            spec_version=$(unzip -p "$pkg" "*.nuspec" | sed -n 's:.*<version>\(.*\)</version>.*:\1:p' | head -n1)
-
-            if [[ -z "${spec_id:-}" || -z "${spec_version:-}" ]]; then
-              echo "Could not parse nuspec for $pkg, skipping."
+            if [[ "$packable" != "true" ]]; then
               continue
             fi
 
-            # Determine if a matching tag exists for this package/version
-            MATCHED=false
-            if echo "$TAGS" | grep -Fxq "$spec_id/v$spec_version"; then
-              MATCHED=true
-            elif echo "$TAGS" | grep -Fxq "v$spec_version"; then
-              MATCHED=true
-            fi
-
-            if [[ "$MATCHED" != "true" ]]; then
-              echo "No matching tag for $spec_id $spec_version, skipping."
+            if [[ -z "$pkg" || "$pkg" == "null" || -z "$ver" || "$ver" == "null" ]]; then
               continue
             fi
 
-            echo "Publishing $spec_id $spec_version to NuGet.org..."
-            dotnet nuget push "$pkg" \
+            tag="$pkg/v$ver"
+            if ! echo "$TAGS" | grep -Fxq "$tag"; then
+              echo "No matching tag for $pkg $ver, skipping."
+              continue
+            fi
+
+            nupkg="./artifacts/${pkg}.${ver}.nupkg"
+            if [[ ! -f "$nupkg" ]]; then
+              echo "Expected $nupkg not found, skipping."
+              continue
+            fi
+
+            echo "Publishing $pkg $ver to NuGet.org..."
+            dotnet nuget push "$nupkg" \
               --api-key "$NUGET_API_KEY" \
               --source "https://api.nuget.org/v3/index.json" \
               --skip-duplicate
-          done
+          done < <(git ls-files "src/**/*.csproj")
 
       - name: Show published artifacts
         if: always()

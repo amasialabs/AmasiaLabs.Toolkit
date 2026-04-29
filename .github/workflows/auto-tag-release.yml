@@ -16,6 +16,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
       - name: Configure git user
         run: |
           git config user.name  "github-actions[bot]"
@@ -28,12 +36,24 @@ jobs:
         run: |
           set -euo pipefail
           NEW_TAGS=""
-          # Find all SDK projects under src and read PackageId/Version
+          # Iterate every src/**/*.csproj and use MSBuild's -getProperty: to evaluate
+          # PackageId / Version / IsPackable through the actual SDK pipeline (which
+          # respects Directory.Build.props inheritance and SDK defaults). More robust
+          # than sed-parsing csproj XML, and correctly skips Web SDK / test projects
+          # that have IsPackable=false.
           while IFS= read -r csproj; do
-            pkg=$(sed -n 's:.*<PackageId>\(.*\)</PackageId>.*:\1:p' "$csproj" | head -n1 || true)
-            ver=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$csproj" | head -n1 || true)
+            json=$(dotnet msbuild "$csproj" -getProperty:PackageId,Version,IsPackable -nologo)
+            packable=$(echo "$json" | jq -r '.Properties.IsPackable')
+            pkg=$(echo     "$json" | jq -r '.Properties.PackageId')
+            ver=$(echo     "$json" | jq -r '.Properties.Version')
 
-            if [[ -z "$pkg" || -z "$ver" ]]; then
+            if [[ "$packable" != "true" ]]; then
+              echo "Skipping $csproj (IsPackable=$packable)"
+              continue
+            fi
+
+            if [[ -z "$pkg" || "$pkg" == "null" || -z "$ver" || "$ver" == "null" ]]; then
+              echo "Skipping $csproj (missing PackageId or Version)"
               continue
             fi
 

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <!-- Enable central package management -->
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    
+
     <!-- Common properties for all projects -->
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>default</LangVersion>
@@ -16,6 +16,27 @@
     <Authors>Roman Stefanov</Authors>
     <Company>Amasia</Company>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Repository / project URLs -->
+    <PackageProjectUrl>https://github.com/amasialabs/AmasiaLabs.Toolkit</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/amasialabs/AmasiaLabs.Toolkit</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>amasia toolkit aspnetcore minimalapi flowflake hmac jwt podman</PackageTags>
+
+    <!-- Reproducibility: embed repo URL into nuspec, embed untracked sources in symbols. -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+    <!-- Mark CI builds for deterministic packages. The CI variable is conventionally set
+         by GitHub Actions, GitLab CI, etc.; if not, the property is left unset. -->
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true' or '$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!--
+      License: not declared here. Choose a SPDX expression (MIT, Apache-2.0, etc.) and
+      add a LICENSE file at the repo root, then add:
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+      Without this, NuGet shows "license not specified" on the package page.
+    -->
   </PropertyGroup>
 
 </Project>
