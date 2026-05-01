@@ -8,16 +8,9 @@
     <ProjectReference Include="../../src/AmasiaLabs.Toolkit.FlowflakeId/AmasiaLabs.Toolkit.FlowflakeId.csproj" />
     <ProjectReference Include="../../src/AmasiaLabs.Toolkit.FlowflakeId.Abstractions/AmasiaLabs.Toolkit.FlowflakeId.Abstractions.csproj" />
     <ProjectReference Include="../../src/AmasiaLabs.Toolkit.FlowflakeId.Extensions/AmasiaLabs.Toolkit.FlowflakeId.Extensions.csproj" />
-    <ProjectReference Include="../../src/AmasiaLabs.Toolkit.FlowflakeId.Grpc/AmasiaLabs.Toolkit.FlowflakeId.Grpc.csproj" />
-    <ProjectReference Include="../../src/AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client/AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
-    <PackageReference Include="Grpc.Net.Client" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 </Project>

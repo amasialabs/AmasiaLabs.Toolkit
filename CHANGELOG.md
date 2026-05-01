@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.1.0/),
 and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.html).
 
+## 2026-05-01 — gRPC packages removed
+
+### Removed (BREAKING for gRPC consumers)
+- `AmasiaLabs.Toolkit.FlowflakeId.Grpc` — gRPC service contracts and host wiring.
+- `AmasiaLabs.Toolkit.FlowflakeId.Grpc.Client` — gRPC client SDK implementing `IFlowflakeId`.
+- `AmasiaLabs.Toolkit.FlowflakeId.Grpc.Host` — gRPC server executable + container image.
+
+These three packages stop receiving updates and will no longer be published. Consumers
+should migrate to in-process `AmasiaLabs.Toolkit.FlowflakeId` (with the local generator
+covering the vast majority of use cases) or build a thin wrapper for the few scenarios
+that genuinely needed a remote ID server. With GUIDv7 widely available now, most callers
+will not need either.
+
+### Changed
+- `AmasiaLabs.Toolkit.FlowflakeId` 1.4.15 → 1.4.16 (no API change; bump marks the
+  ecosystem-level change of removed companion packages).
+- `AmasiaLabs.Toolkit.FlowflakeId.Abstractions` 1.4.15 → 1.4.16 (same).
+- `AmasiaLabs.Toolkit.FlowflakeId.Extensions` 1.4.16 → 1.4.17 (same).
+
+### Removed (workflow)
+- `.github/workflows/docker-publish.yml` — the only image it built was the gRPC host.
+- gRPC-specific package versions and orphaned OpenTelemetry/ServiceDiscovery/Resilience
+  entries from `Directory.Packages.props`.
+- gRPC benchmarks from `tests/.../FlowflakeIdBenchmarks.cs`; the local FlowflakeId
+  benchmarks remain.
+
+The full pre-removal source is preserved on the `archive/with-grpc` branch.
+
 ## [1.7.0] - 2025-09-19
 
 Semantic Versioning inference: minor (new features present; no explicit breaking changes detected). If uncertain, default would be patch.
