@@ -3,7 +3,7 @@
   <PropertyGroup>
     
     <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Abstractions</PackageId>
-    <Version>1.4.16</Version>
+    <Version>1.4.17</Version>
     <Description>Abstractions for Flowflake ID generator</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
