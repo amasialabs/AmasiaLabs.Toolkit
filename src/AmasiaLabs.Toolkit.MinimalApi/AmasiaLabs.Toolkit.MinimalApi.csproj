@@ -3,13 +3,19 @@
     <PropertyGroup>
         
         <PackageId>AmasiaLabs.Toolkit.MinimalApi</PackageId>
-        <Version>1.7.21</Version>
+        <Version>1.7.22</Version>
         <Description>Toolkit &amp; Boilerplate for Minimal API projects</Description>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+      <!-- Promote the transitive Microsoft.OpenApi (pulled in by Microsoft.AspNetCore.OpenApi
+           at 2.0.0) to a direct reference so the centrally-managed 2.7.5 wins. Version is
+           supplied implicitly by Central Package Management (Directory.Packages.props).
+           Stay on the 2.x line: AspNetCore.OpenApi 10.0.9's source generator targets the
+           2.x API (IOpenApiMediaType.Example setter), which 3.x removed -> CS0200. -->
+      <PackageReference Include="Microsoft.OpenApi" />
       <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     </ItemGroup>
 
