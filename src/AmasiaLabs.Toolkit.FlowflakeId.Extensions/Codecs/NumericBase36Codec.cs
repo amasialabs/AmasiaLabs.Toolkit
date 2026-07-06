@@ -8,7 +8,8 @@ namespace AmasiaLabs.Toolkit.FlowflakeId.Extensions.Codecs;
 public sealed class NumericBase36Codec : IIdCodec
 {
     private const string Alphabet = "0123456789abcdefghijklmnopqrstuvwxyz";
-    private static readonly sbyte[] Map = BuildMap();
+    // Base36 is case-insensitive: fold so 'A' and 'a' map to the same index.
+    private static readonly sbyte[] Map = CodecCharMap.Build(Alphabet, foldCase: true);
 
     public string Encode(long value)
     {
@@ -31,23 +32,10 @@ public sealed class NumericBase36Codec : IIdCodec
         ulong acc = 0;
         foreach (char ch in text)
         {
-            int v = ch < 256 ? Map[(byte)ch] : -1;
+            int v = CodecCharMap.IndexOf(Map, ch);
             if (v < 0) throw new FormatException($"Invalid Base36 character: '{ch}'");
             acc = checked(acc * 36UL + (uint)v);
         }
         return (long)acc;
-    }
-    
-    private static sbyte[] BuildMap()
-    {
-        var m = new sbyte[256];
-        Array.Fill(m, (sbyte)-1);
-        for (int i = 0; i <= 9; i++) { m['0' + i] = (sbyte)i; }
-        for (int i = 0; i < 26; i++)
-        {
-            m['a' + i] = (sbyte)(10 + i);
-            m['A' + i] = (sbyte)(10 + i);
-        }
-        return m;
     }
 }

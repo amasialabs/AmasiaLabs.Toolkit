@@ -47,6 +47,34 @@ public class ApiKeyIntegrationTests
     }
 
     [Fact]
+    public async Task Default_Location_Should_Reject_Query_String_Key()
+    {
+        // Security default: with Location = Header (the new default), a key supplied only
+        // in the query string must NOT authenticate, since query strings leak into logs,
+        // history, and Referer headers.
+        var (_, client) = await BuildApp();
+
+        var resp = await client.GetAsync(
+            $"/sec?api_key={TestApiKeyProvider.ValidKey}",
+            TestContext.Current.CancellationToken);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "query-string keys are opt-in and rejected under the default Header location");
+    }
+
+    [Fact]
+    public async Task Query_Location_When_Opted_In_Should_Accept_Query_String_Key()
+    {
+        // Consumers can still opt into query-string keys explicitly.
+        var (_, client) = await BuildApp(configureAuth: opts => opts.Location = ApiKeyLocation.Query);
+
+        var resp = await client.GetAsync(
+            $"/sec?api_key={TestApiKeyProvider.ValidKey}",
+            TestContext.Current.CancellationToken);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task Authenticated_But_Forbidden_Should_Return_403_ProblemDetails()
     {
         // Arrange

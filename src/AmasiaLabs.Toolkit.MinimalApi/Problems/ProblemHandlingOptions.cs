@@ -33,6 +33,9 @@ public sealed class ProblemHandlingOptions
 
     public static (int Status, string Title, string? Detail) Resolve(Exception ex, HttpContext ctx) => ex switch
     {
+        // Protocol-level request errors (malformed chunked framing, oversized body, etc.) carry
+        // their own client-error status — surface that instead of collapsing them to a 500.
+        BadHttpRequestException bad => (bad.StatusCode, "Bad request", null),
         ArgumentException or FormatException => (StatusCodes.Status400BadRequest, "Bad request", null),
         KeyNotFoundException => (StatusCodes.Status404NotFound, "Not found", null),
         UnauthorizedAccessException => (StatusCodes.Status403Forbidden, "Forbidden", null),

@@ -36,7 +36,7 @@ public class CrockfordBase32Codec(bool withChecksum = false) : IIdCodec
         for (int i = 0; i < payloadEnd; i++)
         {
             char ch = cleaned[i];
-            int v = ch < 256 ? Map[(byte)ch] : -1;
+            int v = CodecCharMap.IndexOf(Map, ch);
             if (v < 0) throw new FormatException($"Invalid Base32 character: '{ch}'");
             acc = checked(acc * 32UL + (uint)v);
         }
@@ -52,15 +52,9 @@ public class CrockfordBase32Codec(bool withChecksum = false) : IIdCodec
 
     private static sbyte[] BuildMap()
     {
-        var m = new sbyte[256];
-        Array.Fill(m, (sbyte)-1);
-        for (int i = 0; i <= 9; i++) m['0' + i] = (sbyte)i;
-        for (int i = 0; i < Alphabet.Length - 10; i++)
-        {
-            char c = Alphabet[10 + i];
-            m[(byte)c] = (sbyte)(10 + i);
-            m[(byte)char.ToLowerInvariant(c)] = (sbyte)(10 + i);
-        }
+        // Case-insensitive, plus Crockford's confusable aliases: O/o -> 0, I/i/L/l -> 1
+        // (those letters are excluded from the alphabet itself).
+        var m = CodecCharMap.Build(Alphabet, foldCase: true);
         m['o'] = m['O'] = 0;
         m['i'] = m['I'] = 1;
         m['l'] = m['L'] = 1;

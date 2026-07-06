@@ -389,6 +389,82 @@ public class HmacIntegrationTests
         resp.StatusCode.Should().Be(HttpStatusCode.OK, "server must sign the raw timestamp header value, not a server-side reformatted version");
     }
 
+    [Fact]
+    public async Task BodyOnly_Mode_Chunked_Body_Should_Be_Authenticated()
+    {
+        // Positive case: a legitimate client that streams the body with chunked transfer
+        // encoding (ContentLength == null on the server) and signs the real body must
+        // authenticate in the default BodyOnly mode. The old ContentLength>0 gate would
+        // have signed the empty payload instead and rejected this valid request.
+        var (_, client) = await BuildHmacApp();
+
+        var body = "important payload that must be authenticated";
+        var bodyBytes = Encoding.UTF8.GetBytes(body);
+        var signature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, body);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
+        {
+            Content = new ChunkedTestContent(bodyBytes, "text/plain"),
+        };
+        req.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+        req.Headers.Add("X-Signature", signature);
+
+        var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK, "a chunked body signed against its real content must validate in BodyOnly mode");
+    }
+
+    [Fact]
+    public async Task BodyOnly_Mode_Empty_Signed_Chunked_Body_Should_Be_Rejected()
+    {
+        // The attack this fix closes: an attacker captures a signature computed over the
+        // EMPTY payload (trivially available from any signed empty-body request), then
+        // sends a chunked request (ContentLength == null) carrying an arbitrary body.
+        // The old code treated the null length as an empty payload, matched the empty-body
+        // signature, and let the injected body reach the endpoint authenticated. Reading
+        // the stream unconditionally makes the signature no longer match.
+        var (_, client) = await BuildHmacApp();
+
+        var emptySignature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, string.Empty);
+        var maliciousBody = Encoding.UTF8.GetBytes("injected body the attacker never signed");
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo")
+        {
+            Content = new ChunkedTestContent(maliciousBody, "text/plain"),
+        };
+        req.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+        req.Headers.Add("X-Signature", emptySignature);
+
+        var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "a signature computed over the empty payload must not authenticate a non-empty chunked body");
+    }
+
+    [Fact]
+    public async Task BodyOnly_Mode_Signed_Payload_Should_Commit_To_Raw_Body_Bytes_Including_Bom()
+    {
+        // Regression for the StreamReader BOM bug: the reader must not strip or act on a byte-order
+        // mark, or the signed string stops committing to the exact bytes on the wire. A body whose
+        // bytes begin with a UTF-8 BOM must authenticate when the client signs the byte-faithful
+        // string (U+FEFF + text). The old reader stripped the BOM and signed "hello", which both
+        // rejected this legitimate request and let a captured "hello" signature cover BOM-prefixed bytes.
+        var (_, client) = await BuildHmacApp();
+
+        byte[] rawBytes = [0xEF, 0xBB, 0xBF, .. Encoding.UTF8.GetBytes("hello")];
+        const string signedString = "\uFEFFhello"; // exactly what the raw bytes decode to, byte-for-byte
+        var signature = TestHmacSignature.Sign(TestHmacKeyProvider.Key, signedString);
+
+        var content = new ByteArrayContent(rawBytes);
+        content.Headers.ContentType = new MediaTypeHeaderValue("text/plain");
+        var req = new HttpRequestMessage(HttpMethod.Post, "/secure-echo") { Content = content };
+        req.Headers.Add("X-Client-Id", TestHmacKeyProvider.ClientId);
+        req.Headers.Add("X-Signature", signature);
+
+        var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK, "the signed payload must commit to the exact body bytes, including a leading BOM");
+    }
+
     private static string BuildCanonicalRequest(
         string method, string path, string query, string rawTimestamp, string nonce, string body)
     {

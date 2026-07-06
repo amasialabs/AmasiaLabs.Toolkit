@@ -5,7 +5,7 @@ namespace AmasiaLabs.Toolkit.FlowflakeId.Extensions.Codecs;
 public class NumericBase58Codec : IIdCodec
 {
     private const string Alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-    private static readonly sbyte[] Map = BuildMap();
+    private static readonly sbyte[] Map = CodecCharMap.Build(Alphabet);
 
     public string Encode(long value)
     {
@@ -28,18 +28,10 @@ public class NumericBase58Codec : IIdCodec
         ulong acc = 0;
         foreach (char ch in text)
         {
-            int v = ch < 256 ? Map[(byte)ch] : -1;
+            int v = CodecCharMap.IndexOf(Map, ch);
             if (v < 0) throw new FormatException($"Invalid Base58 character: '{ch}'");
             acc = checked(acc * 58UL + (uint)v);
         }
         return (long)acc;
-    }
-
-    private static sbyte[] BuildMap()
-    {
-        var m = new sbyte[256];
-        Array.Fill(m, (sbyte)-1);
-        for (int i = 0; i < Alphabet.Length; i++) m[(byte)Alphabet[i]] = (sbyte)i;
-        return m;
     }
 }

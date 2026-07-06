@@ -3,7 +3,7 @@
   <PropertyGroup>
     
     <PackageId>AmasiaLabs.Toolkit.FlowflakeId.Extensions</PackageId>
-    <Version>1.4.19</Version>
+    <Version>1.4.20</Version>
     <Description>DI and formatting extensions for Flowflake ID generator</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>

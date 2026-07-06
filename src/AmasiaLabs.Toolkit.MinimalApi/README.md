@@ -299,20 +299,22 @@ builder.Services.AddHmacAuthentication(configure: opts =>
     opts.SignatureHeader = "X-My-Signature"
     opts.WwwAuthenticateScheme = "HMAC-SHA256";
 
-    // Custom payload (default: full body)
+    // Custom payload (default: full body).
+    // Read the body UNCONDITIONALLY. Gating on ContentLength would sign an empty payload for a
+    // Transfer-Encoding: chunked request (ContentLength == null), letting an attacker replay an
+    // empty-body signature while streaming an arbitrary body past auth. Decode with a BOM-free
+    // UTF-8 reader so the signed string commits to the exact bytes on the wire.
     opts.BuildPayload = async ctx =>
     {
         var method = ctx.Request.Method;
         var path = ctx.Request.Path.ToString();
 
-        string body = string.Empty;
-        if (ctx.Request.ContentLength.GetValueOrDefault() > 0)
-        {
-            ctx.Request.EnableBuffering();
-            using var reader = new StreamReader(ctx.Request.Body, Encoding.UTF8, leaveOpen: true);
-            body = await reader.ReadToEndAsync();
-            ctx.Request.Body.Position = 0;
-        }
+        ctx.Request.EnableBuffering();
+        using var reader = new StreamReader(
+            ctx.Request.Body, new UTF8Encoding(false), detectEncodingFromByteOrderMarks: false, leaveOpen: true);
+        var body = await reader.ReadToEndAsync();
+        ctx.Request.Body.Position = 0;
+
         return $"{method}\n{path}\n{body}";
     };
 
@@ -366,6 +368,10 @@ builder.Services.AddSingleton<IHmacSignatureValidator, HmacSha256HexValidator>()
 ### Payload modes (BodyOnly default vs canonical request)
 
 The handler supports two payload modes via `HmacAuthenticationOptions.PayloadMode`. The default preserves backward compatibility with existing clients.
+
+In BodyOnly mode the full body is buffered and materialized as a string to validate the signature.
+For very large or streamed uploads prefer `CanonicalRequest` mode, which hashes the body
+incrementally (`SHA256_HEX(BODY)`) instead of holding it all in memory.
 
 ```csharp
 // Default (BodyOnly): the signature covers the raw request body only.

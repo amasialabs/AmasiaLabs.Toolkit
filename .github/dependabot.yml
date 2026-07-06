@@ -1,0 +1,14 @@
+# Keeps the SHA-pinned GitHub Actions (and NuGet dependencies) current. For github-actions,
+# Dependabot resolves the pinned commit against new releases and rewrites the trailing
+# "# vX.Y.Z" version comment in the same PR, so the pins stay both fixed and maintained.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"

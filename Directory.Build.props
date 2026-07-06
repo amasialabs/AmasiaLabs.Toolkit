@@ -23,20 +23,25 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>amasia toolkit aspnetcore minimalapi flowflake hmac jwt podman</PackageTags>
 
-    <!-- Reproducibility: embed repo URL into nuspec, embed untracked sources in symbols. -->
+    <!-- Reproducibility: embed repo URL into nuspec, embed untracked sources in symbols.
+         SourceLink itself is bundled in the .NET 8+ SDK and enabled by these properties,
+         but it only helps consumers if the PDBs actually ship — hence the symbol package
+         below. -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+    <!-- Ship debug symbols as a .snupkg (portable PDBs carry the SourceLink map) so
+         consumers can step into library sources from NuGet.org's symbol server. -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
     <!-- Mark CI builds for deterministic packages. The CI variable is conventionally set
          by GitHub Actions, GitLab CI, etc.; if not, the property is left unset. -->
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true' or '$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
 
-    <!--
-      License: not declared here. Choose a SPDX expression (MIT, Apache-2.0, etc.) and
-      add a LICENSE file at the repo root, then add:
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
-      Without this, NuGet shows "license not specified" on the package page.
-    -->
+    <!-- SPDX license expression shown on the NuGet.org package page. The full text
+         lives in LICENSE at the repo root. -->
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
 </Project>

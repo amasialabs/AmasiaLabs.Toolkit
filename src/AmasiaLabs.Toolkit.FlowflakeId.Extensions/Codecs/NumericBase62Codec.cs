@@ -9,6 +9,7 @@ namespace AmasiaLabs.Toolkit.FlowflakeId.Extensions.Codecs;
 public sealed class NumericBase62Codec : IIdCodec
 {
     private const string Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    private static readonly sbyte[] Map = CodecCharMap.Build(Alphabet);
 
     public string Encode(long value)
     {
@@ -36,7 +37,7 @@ public sealed class NumericBase62Codec : IIdCodec
         ulong result = 0;
         foreach (var c in text)
         {
-            var idx = Alphabet.IndexOf(c);
+            var idx = CodecCharMap.IndexOf(Map, c);
             if (idx < 0) throw new FormatException($"Invalid Base62 character: '{c}'");
             result = checked(result * 62 + (uint)idx);
         }

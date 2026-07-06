@@ -7,6 +7,7 @@ using AmasiaLabs.Toolkit.MinimalApi.Problems;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -30,6 +31,11 @@ public sealed partial class HmacAuthenticationHandler(
 {
     public const string SchemeName = "Hmac";
     public const string PolicyName = "HmacOnly";
+
+    // BOM-free UTF-8: no preamble to emit and paired with detectEncodingFromByteOrderMarks:false
+    // the reader neither strips a leading BOM nor switches decoders on a UTF-16/32 BOM, so the
+    // decoded payload string commits to the exact bytes on the wire.
+    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -71,15 +77,13 @@ public sealed partial class HmacAuthenticationHandler(
         }
         else
         {
-            var body = string.Empty;
-            if (Request.ContentLength.GetValueOrDefault() > 0)
-            {
-                Request.EnableBuffering();
-                using var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true);
-                body = await reader.ReadToEndAsync();
-                Request.Body.Position = 0;
-            }
-            payload = body;
+            // Skip buffering for requests that provably cannot carry a body (e.g. a bodiless GET):
+            // the signed payload is the empty string, exactly what such a client signs. Otherwise
+            // read the actual body via the shared helper (see ReadBufferedBodyAsync for why the
+            // read is unconditional and how the invariant is single-sourced across payload modes).
+            payload = Context.Features.Get<IHttpRequestBodyDetectionFeature>()?.CanHaveBody == false
+                ? string.Empty
+                : await ReadBufferedBodyAsync(ReadBodyAsTextAsync, Context.RequestAborted);
         }
 
         try
@@ -175,14 +179,29 @@ public sealed partial class HmacAuthenticationHandler(
 
     private async Task<string> ComputeBodyHashHexAsync(CancellationToken cancellationToken)
     {
-        // Always read the actual body. Treating ContentLength == null as empty would silently
-        // un-authenticate any chunked/streamed body — an attacker could send arbitrary payload
-        // bytes while signing the empty-body hash, and the server would match.
-        Request.EnableBuffering();
         using var sha = SHA256.Create();
-        var hash = await sha.ComputeHashAsync(Request.Body, cancellationToken);
-        Request.Body.Position = 0;
+        var hash = await ReadBufferedBodyAsync((body, ct) => sha.ComputeHashAsync(body, ct), cancellationToken);
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    // Buffers the request body so downstream model binding can re-read it, runs <paramref name="read"/>
+    // over the stream, then rewinds. The body is ALWAYS read — even when Content-Length is absent,
+    // e.g. a Transfer-Encoding: chunked request. Gating on ContentLength would sign an empty payload
+    // for a chunked body, letting an attacker replay an empty-body signature while streaming arbitrary
+    // bytes downstream. Both BodyOnly and canonical mode route through here, so that invariant lives in
+    // exactly one place and a future payload mode cannot regress it.
+    private async Task<T> ReadBufferedBodyAsync<T>(Func<Stream, CancellationToken, Task<T>> read, CancellationToken cancellationToken)
+    {
+        Request.EnableBuffering();
+        var result = await read(Request.Body, cancellationToken);
+        Request.Body.Position = 0;
+        return result;
+    }
+
+    private static async Task<string> ReadBodyAsTextAsync(Stream body, CancellationToken cancellationToken)
+    {
+        using var reader = new StreamReader(body, Utf8NoBom, detectEncodingFromByteOrderMarks: false, leaveOpen: true);
+        return await reader.ReadToEndAsync(cancellationToken);
     }
 
     private readonly struct CanonicalPayloadResult

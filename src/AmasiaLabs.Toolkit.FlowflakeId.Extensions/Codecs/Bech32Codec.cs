@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Text;
 using AmasiaLabs.Toolkit.FlowflakeId.Abstractions;
 
@@ -7,6 +6,7 @@ namespace AmasiaLabs.Toolkit.FlowflakeId.Extensions.Codecs;
 public sealed class Bech32Codec : IIdCodec
 {
     private readonly string _hrp;
+    private readonly byte[] _hrpExpanded; // HrpExpand(_hrp), precomputed once (immutable per instance)
     private readonly bool _useM; // false = bech32, true = bech32m
 
     public Bech32Codec(string hrp, bool bech32M = false)
@@ -14,6 +14,7 @@ public sealed class Bech32Codec : IIdCodec
         if (string.IsNullOrWhiteSpace(hrp))
             throw new ArgumentException("HRP required", nameof(hrp));
         _hrp = hrp.ToLowerInvariant();
+        _hrpExpanded = HrpExpand(_hrp);
         _useM = bech32M;
     }
 
@@ -25,7 +26,7 @@ public sealed class Bech32Codec : IIdCodec
         var five = ConvertBits(bytes, 8, 5, pad: true);
         // create checksum
         var combined = new List<byte>(five);
-        var checksum = CreateChecksum(_hrp, combined, _useM);
+        var checksum = CreateChecksum(_hrpExpanded, combined, _useM);
         combined.AddRange(checksum);
 
         var sb = new StringBuilder(_hrp.Length + 1 + combined.Count);
@@ -55,7 +56,7 @@ public sealed class Bech32Codec : IIdCodec
             if (v < 0) throw new FormatException($"Invalid Bech32 character: '{s[i]}'");
             data.Add((byte)v);
         }
-        if (!VerifyChecksum(hrp, data, _useM)) 
+        if (!VerifyChecksum(_hrpExpanded, data, _useM))
             throw new FormatException("Checksum mismatch");
 
         // remove checksum (6)
@@ -68,17 +69,9 @@ public sealed class Bech32Codec : IIdCodec
 
     // -------- internals --------
     private static readonly char[] Chars = "qpzry9x8gf2tvdw0s3jn54khce6mua7l".ToCharArray();
-    private static readonly sbyte[] Map = BuildMap();
+    private static readonly sbyte[] Map = CodecCharMap.Build(Chars);
 
-    private static sbyte[] BuildMap()
-    {
-        var m = new sbyte[256];
-        Array.Fill(m, (sbyte)-1);
-        for (int i = 0; i < Chars.Length; i++) m[(byte)Chars[i]] = (sbyte)i;
-        return m;
-    }
-
-    private static int DecodeChar(char c) => c < 256 ? Map[(byte)c] : -1;
+    private static int DecodeChar(char c) => CodecCharMap.IndexOf(Map, c);
 
     private static byte[] ToMinimalBigEndian(ulong x)
     {
@@ -177,21 +170,18 @@ public sealed class Bech32Codec : IIdCodec
         return ret;
     }
 
-    private static byte[] CreateChecksum(string hrp, List<byte> data, bool useM)
+    private static byte[] CreateChecksum(byte[] hrpExpanded, List<byte> data, bool useM)
     {
-        var values = new List<byte>(HrpExpand(hrp));
-        values.AddRange(data);
-        values.AddRange(new byte[6]);
-        uint mod = PolyMod(CollectionsMarshal.AsSpan(values)) ^ (useM ? 0x2bc830a3u : 1u);
+        byte[] values = [.. hrpExpanded, .. data, 0, 0, 0, 0, 0, 0];
+        uint mod = PolyMod(values) ^ (useM ? 0x2bc830a3u : 1u);
         var ret = new byte[6];
         for (int i = 0; i < 6; i++) ret[i] = (byte)((mod >> (5 * (5 - i))) & 31);
         return ret;
     }
 
-    private static bool VerifyChecksum(string hrp, List<byte> data, bool useM)
+    private static bool VerifyChecksum(byte[] hrpExpanded, List<byte> data, bool useM)
     {
-        var values = new List<byte>(HrpExpand(hrp));
-        values.AddRange(data);
-        return PolyMod(CollectionsMarshal.AsSpan(values)) == (useM ? 0x2bc830a3u : 1u);
+        byte[] values = [.. hrpExpanded, .. data];
+        return PolyMod(values) == (useM ? 0x2bc830a3u : 1u);
     }
 }

@@ -9,9 +9,11 @@ namespace AmasiaLabs.Toolkit.MinimalApi.Auth.ApiKey;
 public sealed class ApiKeyAuthenticationOptions : AuthenticationSchemeOptions
 {
     /// <summary>
-    /// Where to read the API key from.
+    /// Where to read the API key from. Defaults to <see cref="ApiKeyLocation.Header"/>.
+    /// Reading keys from the query string is opt-in because query values routinely leak
+    /// into server/proxy/CDN access logs, browser history, and the Referer header.
     /// </summary>
-    public ApiKeyLocation Location { get; set; } = ApiKeyLocation.HeaderOrQuery;
+    public ApiKeyLocation Location { get; set; } = ApiKeyLocation.Header;
 
     /// <summary>
     /// Header name for an API key. Default: "X-Api-Key".
@@ -41,7 +43,19 @@ public sealed class ApiKeyAuthenticationOptions : AuthenticationSchemeOptions
 /// </summary>
 public enum ApiKeyLocation
 {
+    /// <summary>Read the key only from the configured header. Default and recommended.</summary>
     Header,
+
+    /// <summary>
+    /// Read the key only from the query string. Not recommended: query strings are
+    /// routinely captured in access logs, browser history, and can leak via the Referer
+    /// header. Prefer <see cref="Header"/>.
+    /// </summary>
     Query,
+
+    /// <summary>
+    /// Accept the key from either the header or the query string. Inherits the
+    /// query-string exposure risk described on <see cref="Query"/>.
+    /// </summary>
     HeaderOrQuery
 }
