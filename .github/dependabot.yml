@@ -12,3 +12,13 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # Microsoft.OpenApi 3.x requires AspNetCore.OpenApi 11.x / .NET 11: the 10.0.x source
+      # generator only compiles against the 2.x surface (CS0200) and 3.x throws at runtime
+      # (MissingMethodException). Stay on 2.x until a .NET 11 migration.
+      - dependency-name: "Microsoft.OpenApi"
+        update-types: ["version-update:semver-major"]
+      # FluentAssertions 8.x moved to a paid commercial license (Xceed); 7.x is the last free
+      # (Apache-2.0) line, hence the exact [7.2.0] pin in Directory.Packages.props.
+      - dependency-name: "FluentAssertions"
+        update-types: ["version-update:semver-major"]
