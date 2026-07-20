@@ -16,7 +16,7 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <!-- Must stay on 2.x while targeting net10.0 — see the rationale in
          src/AmasiaLabs.Toolkit.MinimalApi/AmasiaLabs.Toolkit.MinimalApi.csproj -->
-    <PackageVersion Include="Microsoft.OpenApi" Version="[2.10.0,3.0.0)" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="[2.11.0, 3.0.0)" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="FluentAssertions" Version="[7.2.0]" />
