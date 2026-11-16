@@ -5,6 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.1.0/),
 and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.html).
 
+## 2026-11-16 — problems answered as JSON whatever the request accepts
+
+### Fixed
+- `AmasiaLabs.Toolkit.MinimalApi`: the toolkit gave no problem document to a request whose
+  `Accept` header admits no JSON (`text/plain`, `application/xml`, `text/html` alone). The
+  default writer of ASP.NET Core declines such a request, and `IProblemDetailsService.WriteAsync`
+  then throws. As a result:
+  - an exception that reached `UseGlobalExceptionHandling` gave an empty 500, or the developer
+    exception page in Development;
+  - the result helpers (`ctx.Conflict(...)` and the others), the status middlewares
+    (`UseProblemBadRequest`, `UseProblemConflict`, `UseProblemUnprocessableContent`,
+    `UseProblemMethodNotAllowed`, `UseProblemTooManyRequests`), `MapProblemFallback404`, and the
+    401 and 403 of the API-key, HMAC and JWT handlers threw.
+- With the framework's `IProblemDetailsService`, which `AddGlobalExceptionHandling` and
+  `AddProblemDetails()` register, the toolkit now answers its own problems as
+  `application/problem+json`:
+  - with `AddGlobalExceptionHandling`, all of the above, in the toolkit's form;
+  - with `AddProblemDetails()` alone, all of the above but the exception handler, with the
+    framework's defaults and the application's own `CustomizeProblemDetails`, run once. This
+    set-up has no exception handler of the toolkit: an exception that nothing catches is
+    answered as before, by the server's empty 500 in Production and by the developer exception
+    page in Development.
+- With an application's own `IProblemDetailsService`, the toolkit calls its `WriteAsync` exactly
+  as 1.9.0 did, and its answer stands. With no `IProblemDetailsService` registered, the toolkit
+  throws as before.
+- `AddGlobalExceptionHandling` also registers a writer, after the framework's own, that answers
+  in the toolkit's form what the framework writes through `IProblemDetailsService` for such a
+  request. With `AddProblemDetails()` alone, what the framework writes is unchanged.
+
+What a service sees change for a request that accepts no JSON (`text/plain`,
+`application/xml`, `text/html` alone):
+- the toolkit's handlers for API keys, HMAC and JWT: a 401 or 403 was a 500 (empty in
+  Production, the developer exception page in Development) and is now a 401 or 403 problem
+  document; a monitor will see the status change;
+- the toolkit's exception handler, result helpers, status middlewares and 404 fallback: a 500
+  (empty in Production, the developer exception page in Development) is now a problem document
+  with the intended status;
+- the logs, with `AddGlobalExceptionHandling`: under Kestrel one such exception gave four Error
+  records and now gives one, the toolkit's. The three that are gone are the exception-handler
+  middleware's two ("An exception was thrown attempting to execute the error handler.", "An
+  unhandled exception has occurred while executing the request.") and Kestrel's own;
+- the logs, with `AddProblemDetails()` alone: each failing helper, middleware, fallback or
+  challenge gave one Kestrel Error record and now gives none;
+- with `AddGlobalExceptionHandling`, `UseStatusCodePages()`: the plain text "Status Code: 404;
+  Not Found" is now a problem document;
+- with `AddGlobalExceptionHandling`, the developer exception page in Development, for an
+  exception the toolkit's handler does not take: the plain-text page is now a problem document
+  with the same content. The HTML page for `text/html` and for a browser is unchanged, with one
+  exception: with the toolkit's handler in Development, a request for `text/html` alone now
+  gets the JSON 500 where it got the HTML page after the handler had failed;
+- with `AddGlobalExceptionHandling`, the following give the toolkit's form instead of the
+  framework's bare body: `Results.ValidationProblem` and `TypedResults.ValidationProblem`,
+  `Results.Problem` and `TypedResults.Problem`, and the filter of `AddValidation()`;
+- with `AddGlobalExceptionHandling`, the minimal API's own 400 for a body that is not valid
+  JSON: on 1.9.0 it was an empty 400 in Production, and in Development an exception that
+  reached the exception handler, where it failed as above. It is now a 400 problem document
+  in the toolkit's form.
+
+A client that accepts JSON sees none of it. That is a request with no `Accept` header, with
+`application/json`, `application/problem+json` or `*/*`, or with a browser's usual header,
+which holds `*/*`. With the framework's `IProblemDetailsService` its answers are the same as
+1.9.0's, byte for byte.
+
+With an application's own `IProblemDetailsService` that does not ask the registered
+`IProblemDetailsWriter`s, every answer is the same as 1.9.0's, byte for byte, whatever the
+request accepts. One that hands the problem to the registered writers, as a service that wraps
+the framework's own does, keeps its answers for a request that accepts JSON; with
+`AddGlobalExceptionHandling`, a request that accepts no JSON is then answered by the writer
+registered there, as a problem document, where 1.9.0 answered a 500.
+
 ## 2026-11-16 — .NET 11 target, .NET 10 dropped
 
 ### Removed (BREAKING for consumers on .NET 10)

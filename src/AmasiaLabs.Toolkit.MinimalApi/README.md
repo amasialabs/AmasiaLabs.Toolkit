@@ -69,6 +69,15 @@ app.UseGlobalExceptionHandling();
   - 400/409/422 defaults: `app.UseProblemBadRequest()`, `app.UseProblemConflict()`, `app.UseProblemUnprocessableContent()`
   - 429 throttling: `app.UseProblemTooManyRequests()` (and see rate limiter sample below)
 - Centralized formatting: `AddGlobalExceptionHandling` registers `AddProblemDetails` with defaults (type/instance/traceId and default messages). Any `ProblemDetails` written through `IProblemDetailsService` gets these applied automatically.
+- Requests that accept no JSON: ASP.NET Core's own problem writer declines a request whose `Accept` header admits no JSON (`text/plain`, `application/xml`, `text/html` alone). With the framework's `IProblemDetailsService`, which `AddGlobalExceptionHandling` and `AddProblemDetails()` register, the toolkit answers its own problems as `application/problem+json` all the same.
+  - With `AddGlobalExceptionHandling`, in the form above. This covers the global exception handler, the result helpers (`ctx.Conflict(...)` and the others), the status middlewares, `MapProblemFallback404`, and the 401/403 of the API-key, HMAC and JWT handlers.
+  - `AddGlobalExceptionHandling` also registers a writer that answers, in the same form, what the framework itself writes through `IProblemDetailsService` for such a request: `Results.Problem` and `TypedResults.Problem`, `ValidationProblem`, status code pages, the developer exception page.
+  - With `AddProblemDetails()` alone, with the framework's defaults, plus your `CustomizeProblemDetails` if you set one. This covers the result helpers, the status middlewares, `MapProblemFallback404`, and the 401/403 of the three handlers.
+  - With `AddProblemDetails()` alone there is no global exception handler: an exception that nothing catches is answered as before, by the server's empty 500 in Production and by the developer exception page in Development. What the framework itself writes is unchanged.
+  - With an `IProblemDetailsService` of your own, the toolkit calls its `WriteAsync` as before and leaves the answer to it. If your service hands the problem to the registered writers, as one that wraps the framework's service does, then with `AddGlobalExceptionHandling` the writer registered there answers a request that accepts no JSON as well.
+  - With no `IProblemDetailsService` registered, the toolkit throws, as it always has.
+  - A request that accepts JSON is answered by the framework's writer as before; that includes a browser's usual `Accept` header, which holds `*/*`.
+- Your own writer: writers are asked in the order they are registered, and the first that can write the request answers it. To answer some requests in another format, register your `IProblemDetailsWriter` before calling `AddGlobalExceptionHandling`. A writer registered after it is still asked for the requests it can write only if the container hands back the instances it registered: with a decorated writer, or a container that creates other instances, the toolkit's writer answers every request that accepts no JSON itself, so register yours before.
 
 Annotate routes for OpenAPI:
 

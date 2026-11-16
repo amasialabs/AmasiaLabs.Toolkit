@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AmasiaLabs.Toolkit.MinimalApi.Problems;
 
@@ -33,6 +35,11 @@ public static class ErrorHandlingExtensions
                 pd.Detail ??= options.GetMessage(status);
             };
         });
+        // After the framework's own writer, which AddProblemDetails registers: a request that
+        // accepts JSON is still answered by that writer, and what the framework writes through
+        // IProblemDetailsService for any other request is answered as application/problem+json
+        // instead of failing or falling back to the framework's bare JSON or plain text.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProblemDetailsWriter, JsonFallbackProblemDetailsWriter>());
         services.AddExceptionHandler<GlobalExceptionHandler>();
         return services;
     }

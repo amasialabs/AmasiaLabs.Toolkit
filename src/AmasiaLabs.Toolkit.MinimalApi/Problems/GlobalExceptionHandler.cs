@@ -37,7 +37,7 @@ public sealed partial class GlobalExceptionHandler(
         };
 
         httpContext.Response.StatusCode = mapped.Status;
-        await problemDetailsService.WriteAsync(pdContext);
+        await ProblemDetailsWriter.WriteAsync(problemDetailsService, pdContext);
         return true;
     }
 
