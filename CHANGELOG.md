@@ -75,6 +75,9 @@ the framework's own does, keeps its answers for a request that accepts JSON; wit
 `AddGlobalExceptionHandling`, a request that accepts no JSON is then answered by the writer
 registered there, as a problem document, where 1.9.0 answered a 500.
 
+### Changed
+- `AmasiaLabs.Toolkit.MinimalApi` 1.9.0 → 1.9.1. No other package changes.
+
 ## 2026-11-16 — .NET 11 target, .NET 10 dropped
 
 ### Removed (BREAKING for consumers on .NET 10)
