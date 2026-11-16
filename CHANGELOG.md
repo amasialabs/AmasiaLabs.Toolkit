@@ -25,6 +25,11 @@ and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.
 - `FlowflakeId` no longer lists `Microsoft.Extensions.Options`, and
   `FlowflakeId.Abstractions` no longer lists `System.ComponentModel.Annotations`: the .NET 11
   shared framework carries both.
+- `AmasiaLabs.Toolkit.MinimalApi` 1.8.3 → 1.9.0.
+- `AmasiaLabs.Toolkit.Podman` 1.0.23 → 1.1.0.
+- `AmasiaLabs.Toolkit.FlowflakeId` 1.4.21 → 1.5.0.
+- `AmasiaLabs.Toolkit.FlowflakeId.Abstractions` 1.4.19 → 1.5.0.
+- `AmasiaLabs.Toolkit.FlowflakeId.Extensions` 1.4.22 → 1.5.0.
 
 ### Changed (build)
 - `Directory.Build.props` targets `net11.0`; `global.json` pins the .NET 11 SDK (11.0.100,
