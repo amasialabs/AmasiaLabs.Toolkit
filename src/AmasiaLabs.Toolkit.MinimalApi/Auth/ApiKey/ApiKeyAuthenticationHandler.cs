@@ -27,7 +27,7 @@ public sealed partial class ApiKeyAuthenticationHandler(
     {
         var endpoint = Context.GetEndpoint();
         var isAnonymous = endpoint?.Metadata.GetMetadata<IAllowAnonymous>() is not null;
-        var requiresAuth = endpoint?.Metadata.GetOrderedMetadata<IAuthorizeData>().Any() == true;
+        var requiresAuth = endpoint?.Metadata.GetOrderedMetadata<IAuthorizeData>().Count > 0;
 
         if (isAnonymous || !requiresAuth)
             return AuthenticateResult.NoResult();

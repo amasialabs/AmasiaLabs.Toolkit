@@ -41,7 +41,7 @@ public sealed partial class HmacAuthenticationHandler(
     {
         var endpoint = Context.GetEndpoint();
         var isAnonymous = endpoint?.Metadata.GetMetadata<IAllowAnonymous>() is not null;
-        var requiresAuth = endpoint?.Metadata.GetOrderedMetadata<IAuthorizeData>().Any() == true;
+        var requiresAuth = endpoint?.Metadata.GetOrderedMetadata<IAuthorizeData>().Count > 0;
 
         var clientIdHeader = Options.ClientIdHeader;
         var signatureHeader = Options.SignatureHeader;

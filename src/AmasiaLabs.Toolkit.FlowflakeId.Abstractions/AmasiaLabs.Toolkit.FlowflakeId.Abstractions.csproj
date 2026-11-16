@@ -12,8 +12,7 @@
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.ComponentModel.Annotations" />
-  </ItemGroup>
+  <!-- System.ComponentModel.Annotations needs no package reference: the .NET 11 shared
+       framework carries it, and NuGet asks for the reference to go (NU1510). -->
 
 </Project>

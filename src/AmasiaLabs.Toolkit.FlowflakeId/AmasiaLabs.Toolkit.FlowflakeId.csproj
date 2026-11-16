@@ -16,8 +16,7 @@
     <ProjectReference Include="..\AmasiaLabs.Toolkit.FlowflakeId.Abstractions\AmasiaLabs.Toolkit.FlowflakeId.Abstractions.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Options" />
-  </ItemGroup>
+  <!-- Microsoft.Extensions.Options needs no package reference: the .NET 11 shared framework
+       (Microsoft.NETCore.App) carries it, and NuGet asks for the reference to go (NU1510). -->
 
 </Project>

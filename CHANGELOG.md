@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.1.0/),
 and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.html).
 
+## 2026-11-16 — .NET 11 target, .NET 10 dropped
+
+### Removed (BREAKING for consumers on .NET 10)
+- The `net10.0` target. All five packages target `net11.0` alone, so a project on .NET 10
+  cannot take these versions. The last versions that support .NET 10:
+  - `AmasiaLabs.Toolkit.MinimalApi` 1.8.3
+  - `AmasiaLabs.Toolkit.Podman` 1.0.23
+  - `AmasiaLabs.Toolkit.FlowflakeId` 1.4.21
+  - `AmasiaLabs.Toolkit.FlowflakeId.Abstractions` 1.4.19
+  - `AmasiaLabs.Toolkit.FlowflakeId.Extensions` 1.4.22
+
+### Changed
+- The packages target `net11.0` and go with the .NET 11 packages:
+  `Microsoft.AspNetCore.OpenApi`, `Microsoft.AspNetCore.Authentication.JwtBearer`,
+  `Microsoft.Extensions.Hosting` and `Microsoft.Extensions.Options.DataAnnotations` 11.0.0,
+  and (MinimalApi) `Microsoft.OpenApi` `[3.11.0, 4.0.0)`, the 3.x line that
+  `Microsoft.AspNetCore.OpenApi` 11.x is built against. No API change.
+- `FlowflakeId` no longer lists `Microsoft.Extensions.Options`, and
+  `FlowflakeId.Abstractions` no longer lists `System.ComponentModel.Annotations`: the .NET 11
+  shared framework carries both.
+
+### Changed (build)
+- `Directory.Build.props` targets `net11.0`; `global.json` pins the .NET 11 SDK (11.0.100,
+  `latestMinor`); the workflows install the 11.0.x SDK.
+
 ## 2026-05-01 — gRPC packages removed
 
 ### Removed (BREAKING for gRPC consumers)
